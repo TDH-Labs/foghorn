@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template — daily ideate->draft->gate->approvals run (Phase 5+). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.foghorn.content-engine</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>cd __FOGHORN_ROOT__ &amp;&amp; exec bun run foghorn.ts engine</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>45</integer></dict>
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/foghorn/content-engine.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/foghorn/content-engine.log</string>
+</dict>
+</plist>

@@ -9,7 +9,6 @@ import { ensureSource, getCursor, setCursor, storeMessages } from "./ingest/stor
 import { importLinkedInExport, importXArchive } from "./ingest/archives.ts";
 
 const PHASE_STUBS: Record<string, string> = {
-  engine: "Phase 5",
   metrics: "Phase 6",
   report: "Phase 8",
   diagnose: "Phase 8",
@@ -243,6 +242,61 @@ export async function main(argv: string[]): Promise<number> {
         console.log(JSON.stringify(report));
         for (const card of freshTrendCards(db, platform, 6)) {
           console.log(`  [${card.format}] ${card.title} — ${card.summary}`);
+        }
+        return 0;
+      } finally {
+        db.close();
+      }
+    }
+    case "engine": {
+      const db = openAndMigrate();
+      try {
+        if (isPaused(db)) { console.log("paused — engine idle"); return 0; }
+        const { ratifiedPlatform } = await import("./select/platform-scorer.ts");
+        const platform = rest[0] ?? ratifiedPlatform(db);
+        if (!platform) { console.error("no ratified platform — 'foghorn score ratify <platform>' first"); return 1; }
+        const { generateTextResilient } = await import("./llm/generate.ts");
+        const { runEngine } = await import("./create/engine.ts");
+        const report = await runEngine(db, { generate: (o) => generateTextResilient(db, o) }, platform);
+        console.log(JSON.stringify(report));
+        return 0;
+      } finally {
+        db.close();
+      }
+    }
+    case "approvals-daemon": {
+      const db = openAndMigrate();
+      const { expireStaleApprovals } = await import("./approvals/queue.ts");
+      const { pollOnce, sendPendingApprovals } = await import("./approvals/telegram.ts");
+      const once = rest.includes("--once");
+      console.log(`approvals daemon up (chat ${process.env.FOGHORN_TELEGRAM_CHAT_ID ?? "7078451053"})`);
+      for (;;) {
+        try {
+          const expired = expireStaleApprovals(db);
+          const sent = await sendPendingApprovals(db);
+          const poll = await pollOnce(db, fetch, once ? 0 : 25);
+          if (expired || sent || poll.updates) {
+            console.log(JSON.stringify({ at: new Date().toISOString(), expired, sent, ...poll }));
+          }
+        } catch (err) {
+          console.error(`daemon cycle error: ${err instanceof Error ? err.message : String(err)}`);
+          await new Promise((r) => setTimeout(r, 5000));
+        }
+        if (once) { db.close(); return 0; }
+      }
+    }
+    case "holds": {
+      const db = openAndMigrate();
+      try {
+        const rows = db
+          .query<{ id: number; draft_id: number | null; specialty: string; packet_json: string; created_at: string }, []>(
+            "SELECT id, draft_id, specialty, packet_json, created_at FROM holds WHERE status='open' ORDER BY id",
+          )
+          .all();
+        if (rows.length === 0) { console.log("no open holds"); return 0; }
+        for (const h of rows) {
+          const packet = JSON.parse(h.packet_json) as { reason?: string };
+          console.log(`#${h.id} draft=${h.draft_id} [${h.specialty}] ${h.created_at} — ${packet.reason ?? ""}`);
         }
         return 0;
       } finally {

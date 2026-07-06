@@ -1,0 +1,69 @@
+{
+  "note": "Gate regression corpus: every bad post must be blocked by exactly the intended gate; its corrected twin must pass the full deterministic chain. Canaries for the shadow week live here too.",
+  "cases": [
+    {
+      "name": "pii-phone",
+      "expectBlockedBy": "gate-secrets-pii",
+      "body": "DM me or just call (913) 555-0142 and let's talk agent gating",
+      "corrected": "DM me and let's talk agent gating — calendar link in bio"
+    },
+    {
+      "name": "api-key-canary",
+      "expectBlockedBy": "gate-secrets-pii",
+      "body": "debugging tip: my key sk-ant-canary12345678901234 kept failing because of a trailing newline",
+      "corrected": "debugging tip: API keys with an invisible trailing newline fail in the weirdest ways — trim before you export"
+    },
+    {
+      "name": "private-leak-other-verbatim",
+      "expectBlockedBy": "gate-private-leak",
+      "seedOtherMessage": "we are quietly laying off a third of the team before the fundraise closes next month",
+      "body": "wild: a founder friend says they are quietly laying off a third of the team before the fundraise closes",
+      "corrected": "seen it twice now: headcount quietly shrinks right before a raise. watch actions, not announcements."
+    },
+    {
+      "name": "banned-topic",
+      "expectBlockedBy": "gate-banned-topics",
+      "seedBannedKeyword": "election",
+      "body": "my honest take on the election results and what they mean for tech",
+      "corrected": "my honest take on platform shifts and what they mean for indie builders"
+    },
+    {
+      "name": "over-limit-x",
+      "expectBlockedBy": "gate-platform-limits",
+      "body": "here is an extremely long post that just keeps going and going because it wants to blow way past the two hundred and eighty character ceiling that x enforces on ordinary posts, and it adds even more filler words, additional clauses, unnecessary adjectives, redundant phrases, and still more padding to be safely over the limit",
+      "corrected": "shipped the gate chain today. crash = block, n/a is never pass, and the publisher trusts nothing but the HMAC."
+    },
+    {
+      "name": "hashtag-spam",
+      "expectBlockedBy": "gate-platform-limits",
+      "body": "big launch day #ai #agents #buildinpublic #startup",
+      "corrected": "big launch day — the gate chain is live #buildinpublic"
+    },
+    {
+      "name": "dead-link",
+      "expectBlockedBy": "gate-links",
+      "body": "wrote this up here https://dead.example.com/404post",
+      "corrected": "wrote this up here https://alive.example.com/post"
+    },
+    {
+      "name": "multi-link-x",
+      "expectBlockedBy": "gate-links",
+      "body": "sources: https://alive.example.com/a and https://alive.example.com/b",
+      "corrected": "sources threaded below — starting with https://alive.example.com/a"
+    },
+    {
+      "name": "dup-of-published",
+      "expectBlockedBy": "gate-dedup",
+      "seedPublishedBody": "verifiers beat vibes every single time so freeze the bytes and gate the send path my friends",
+      "body": "verifiers beat vibes every single time so freeze the bytes and gate the send path my friends",
+      "corrected": "new rule I'm testing: no post ships unless a deterministic check would catch me lying to myself"
+    },
+    {
+      "name": "media-unknown-license",
+      "expectBlockedBy": "gate-media-rights",
+      "mediaOutsideLibrary": true,
+      "body": "chart of the week attached",
+      "corrected": "chart of the week attached"
+    }
+  ]
+}

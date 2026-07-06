@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template — Telegram long-poll approval daemon (KeepAlive, daycare-continuous exemplar). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.foghorn.approvals</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>cd __FOGHORN_ROOT__ &amp;&amp; exec bun run foghorn.ts approvals-daemon</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/foghorn/approvals.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/foghorn/approvals.log</string>
+</dict>
+</plist>
