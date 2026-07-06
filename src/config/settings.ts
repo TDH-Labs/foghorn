@@ -8,7 +8,11 @@ export const ROOT: string =
 
 export const DATA_DIR: string = join(ROOT, "data");
 export const DB_PATH: string = process.env.FOGHORN_DB ?? join(DATA_DIR, "foghorn.db");
-export const PAUSED_FLAG: string = join(DATA_DIR, "PAUSED");
+
+/** Read at call time so tests can isolate the kill-switch flag from the real one. */
+export function pausedFlagPath(): string {
+  return process.env.FOGHORN_PAUSED_FLAG ?? join(DATA_DIR, "PAUSED");
+}
 export const MEDIA_DIR: string = join(DATA_DIR, "media");
 export const LOG_DIR: string = join(process.env.HOME ?? "~", "Library", "Logs", "foghorn");
 

@@ -10,7 +10,10 @@ import { isPaused } from "../killswitch.ts";
 import { platformSpec } from "../config/platforms.ts";
 import { preflight, record, unitCost } from "../spend/ledger.ts";
 import { consume, verify } from "../gate/sentinel.ts";
+import { effectiveLevel } from "../autonomy/ladder.ts";
 import type { PlatformAdapter } from "./adapters/adapter.ts";
+
+export const AUTO_RISK_MAX = 40;
 
 interface DueRow {
   id: number;
@@ -114,9 +117,23 @@ export async function publishTick(
     const sv = verify(db, draft.id, draft.version, bytes);
     if (!sv.ok || sv.sentinelId === undefined) { hold(db, row, `sentinel: ${sv.reason}`); held++; continue; }
 
-    // 2. Authorization: explicit approval for this exact (draft, version).
-    //    (Ladder-auto with risk<40 arrives in Phase 6; explicit approval is the only path until then.)
-    if (!approvalFor(db, draft.id, draft.version)) { hold(db, row, "no approval for this draft version"); held++; continue; }
+    // 2. Authorization: explicit approval for this exact (draft, version), OR
+    //    ladder-auto — L2+ AND risk < 40 AND linkless. Escalated drafts always
+    //    carry human approval (gate-risk 60-84 forces it upstream).
+    if (!approvalFor(db, draft.id, draft.version)) {
+      const level = effectiveLevel(db, draft.platform, draft.content_class);
+      const hasLinkAuto = /https?:\/\//i.test(new TextDecoder().decode(bytes));
+      const autoOk = level >= 2 && draft.risk_score !== null && draft.risk_score < AUTO_RISK_MAX && !hasLinkAuto;
+      if (!autoOk) {
+        hold(db, row, `no approval for this draft version (ladder L${level}${draft.risk_score !== null ? `, risk=${draft.risk_score}` : ""}${hasLinkAuto ? ", has link" : ""})`);
+        held++;
+        continue;
+      }
+      db.run("INSERT INTO journal (scope, ref_id, entry_json) VALUES ('post', ?, ?)", [
+        String(draft.id),
+        JSON.stringify({ action: "auto-publish-authorized", level, risk: draft.risk_score }),
+      ]);
+    }
 
     // 3. Hard ceiling re-check at fire time, independent of gate-cadence.
     const spec = platformSpec(draft.platform);

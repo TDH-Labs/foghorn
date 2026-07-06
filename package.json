@@ -4,14 +4,17 @@
   "private": true,
   "type": "module",
   "description": "Gated, deterministic-send social-influence pipeline. Every post is production.",
-  "bin": { "foghorn": "./foghorn.ts" },
+  "bin": {
+    "foghorn": "./foghorn.ts"
+  },
   "scripts": {
     "cli": "bun run foghorn.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.110.0"
+    "@anthropic-ai/sdk": "^0.110.0",
+    "nostr-tools": "^2.23.9"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

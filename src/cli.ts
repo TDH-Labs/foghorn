@@ -9,7 +9,6 @@ import { ensureSource, getCursor, setCursor, storeMessages } from "./ingest/stor
 import { importLinkedInExport, importXArchive } from "./ingest/archives.ts";
 
 const PHASE_STUBS: Record<string, string> = {
-  metrics: "Phase 6",
   report: "Phase 8",
   diagnose: "Phase 8",
 };
@@ -305,12 +304,62 @@ export async function main(argv: string[]): Promise<number> {
     }
     case "publish-tick": {
       const db = openAndMigrate();
-      // Adapters are registered in Phase 6; an empty map means every due row
-      // is held with a reason rather than silently dropped.
-      const report = await publishTick(db, new Map());
+      const { createAdapters } = await import("./publish/adapters/registry.ts");
+      const report = await publishTick(db, createAdapters());
       console.log(JSON.stringify(report));
       db.close();
       return 0;
+    }
+    case "metrics": {
+      const db = openAndMigrate();
+      try {
+        const { collectXMetrics } = await import("./metrics/collector.ts");
+        const missing = ["X_API_KEY", "X_API_KEY_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"].filter((k) => !process.env[k]);
+        if (missing.length > 0) { console.log(`metrics skipped — missing env: ${missing.join(", ")}`); return 0; }
+        const report = await collectXMetrics(db, {
+          consumerKey: process.env.X_API_KEY!,
+          consumerSecret: process.env.X_API_KEY_SECRET!,
+          accessToken: process.env.X_ACCESS_TOKEN!,
+          accessTokenSecret: process.env.X_ACCESS_TOKEN_SECRET!,
+        });
+        console.log(JSON.stringify(report));
+        return 0;
+      } finally {
+        db.close();
+      }
+    }
+    case "undo": {
+      const id = Number(rest[0]);
+      if (!id) { console.error("usage: foghorn undo <published_post_id> [--incident <reason>]"); return 1; }
+      const db = openAndMigrate();
+      try {
+        const post = db
+          .query<{ id: number; platform: string; external_post_id: string; draft_id: number; deleted_at: string | null }, [number]>(
+            "SELECT id, platform, external_post_id, draft_id, deleted_at FROM published_posts WHERE id = ?",
+          )
+          .get(id);
+        if (!post) { console.error(`no published post ${id}`); return 1; }
+        if (post.deleted_at) { console.log("already deleted"); return 0; }
+        const { createAdapters } = await import("./publish/adapters/registry.ts");
+        const adapter = createAdapters().get(post.platform);
+        if (!adapter) { console.error(`no adapter for ${post.platform} (missing creds?)`); return 1; }
+        await adapter.delete(post.external_post_id);
+        const incidentIdx = rest.indexOf("--incident");
+        const reason = incidentIdx !== -1 ? rest.slice(incidentIdx + 1).join(" ") || "undo" : null;
+        db.run("UPDATE published_posts SET deleted_at = ?, delete_reason = ? WHERE id = ?", [
+          new Date().toISOString(), reason ?? "manual undo", id,
+        ]);
+        if (reason) {
+          const { recordIncident } = await import("./autonomy/ladder.ts");
+          recordIncident(db, post.platform, reason);
+          console.log(`deleted + incident recorded — ${post.platform} demoted to L1 with cooldown`);
+        } else {
+          console.log("deleted");
+        }
+        return 0;
+      } finally {
+        db.close();
+      }
     }
     default: {
       if (verb && PHASE_STUBS[verb]) {

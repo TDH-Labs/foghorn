@@ -5,10 +5,10 @@
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Database } from "bun:sqlite";
-import { PAUSED_FLAG, getSetting, setSetting } from "./config/settings.ts";
+import { pausedFlagPath, getSetting, setSetting } from "./config/settings.ts";
 
 export function isPaused(db?: Database): boolean {
-  if (existsSync(PAUSED_FLAG)) return true;
+  if (existsSync(pausedFlagPath())) return true;
   if (db) {
     try {
       if (getSetting(db, "paused") === "1") return true;
@@ -20,8 +20,9 @@ export function isPaused(db?: Database): boolean {
 }
 
 export function pause(db: Database, reason: string, via: string): void {
-  mkdirSync(dirname(PAUSED_FLAG), { recursive: true });
-  writeFileSync(PAUSED_FLAG, `${new Date().toISOString()} via=${via} reason=${reason}\n`);
+  const flag = pausedFlagPath();
+  mkdirSync(dirname(flag), { recursive: true });
+  writeFileSync(flag, `${new Date().toISOString()} via=${via} reason=${reason}\n`);
   setSetting(db, "paused", "1");
   db.run("INSERT INTO journal (scope, ref_id, entry_json) VALUES ('system', 'killswitch', ?)", [
     JSON.stringify({ action: "pause", reason, via }),
@@ -30,7 +31,7 @@ export function pause(db: Database, reason: string, via: string): void {
 
 export function resume(db: Database, reason: string, via: string): void {
   if (!reason.trim()) throw new Error("resume requires a logged reason");
-  if (existsSync(PAUSED_FLAG)) unlinkSync(PAUSED_FLAG);
+  if (existsSync(pausedFlagPath())) unlinkSync(pausedFlagPath());
   setSetting(db, "paused", "0");
   db.run("INSERT INTO journal (scope, ref_id, entry_json) VALUES ('system', 'killswitch', ?)", [
     JSON.stringify({ action: "resume", reason, via }),

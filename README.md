@@ -34,9 +34,23 @@ bun test                         # unit + structural tests
 ## Phase status
 
 - [x] 0 scaffold + rails (schema, ledger, LLM layer, gate runner, sentinel, publisher core)
-- [ ] 1 ingestion (Beeper Desktop API + X/LinkedIn archives)
-- [ ] 2 profiling · [ ] 3 platform selection + connectors · [ ] 4 research + dashboard
-- [ ] 5 create + gates + approvals (shadow) · [ ] 6 publish (MVP, L1)
-- [ ] 7 reply engine · [ ] 8 learn loop · [ ] 9 autonomy ramp
+- [x] 1 ingestion (Beeper Desktop API + X/LinkedIn archive importers)
+- [x] 2 profiling (voiceprint + versioned LLM profiles, human-ratified)
+- [x] 3 platform selection + validate-on-connect connectors (X OAuth1, LinkedIn, Nostr, Telegram, Beeper)
+- [x] 4 research (watchlist baselines, robust z-score outperformers, web-search trend scanner)
+- [x] 5 create + 13 gates + fix loop/anti-tamper + Telegram approvals + bad-posts corpus
+- [x] 6 publish (X/Nostr/LinkedIn adapters, L2 auto path risk<40+linkless, undo, X metrics)
+      — code-complete; live e2e (Nostr relay → burner X → real L1) blocked on credentials
+- [ ] dashboard (queue/trends/ladder/spend UI) · [ ] 7 reply engine · [ ] 8 learn loop + weekly report · [ ] 9 autonomy ramp
+
+## Onboarding (user actions before first live run)
+
+1. Install Beeper Desktop, sign in, Settings → Developers → token into `.env.local` (`BEEPER_ACCESS_TOKEN`)
+2. Request X archive + LinkedIn data export (24–48h) → `foghorn ingest x-archive/linkedin <zip>`
+3. X developer account (pay-per-use) → 4 keys into `.env.local`
+4. LinkedIn app + "Share on LinkedIn" product + OAuth grant → `LINKEDIN_*` + `LINKEDIN_ACCESS_TOKEN`
+5. BotFather bot → `FOGHORN_TELEGRAM_BOT_TOKEN` (chat id defaults to Adam's)
+6. `foghorn connect all` until green → `profile build` → `profile ratify` → `score build` → `score ratify`
+7. `services/install.sh` to load launchd jobs; shadow week at L0; then L1
 
 Plan of record: `~/.claude/plans/i-want-to-build-proud-minsky.md`

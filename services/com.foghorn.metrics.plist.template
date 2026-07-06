@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template — budgeted own-data metric snapshots every 4h (Phase 6+). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.foghorn.metrics</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>cd __FOGHORN_ROOT__ &amp;&amp; exec bun run foghorn.ts metrics</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>14400</integer>
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/foghorn/metrics.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/foghorn/metrics.log</string>
+</dict>
+</plist>

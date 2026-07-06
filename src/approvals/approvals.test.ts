@@ -8,6 +8,8 @@ import { effectiveLevel, ratifyPromotion, recordCleanApproval, recordIncident } 
 process.env.FOGHORN_SENTINEL_SECRET = "test-secret-0123456789abcdef";
 process.env.FOGHORN_TELEGRAM_BOT_TOKEN = "123:testtoken";
 process.env.FOGHORN_TELEGRAM_CHAT_ID = "7078451053";
+// isolate the kill-switch flag: the telegram 'pause' test must not touch data/PAUSED
+process.env.FOGHORN_PAUSED_FLAG = `${process.env.TMPDIR ?? "/tmp"}/foghorn-test-paused-${process.pid}`;
 
 function freshDb(): Database {
   const db = openDb(":memory:");

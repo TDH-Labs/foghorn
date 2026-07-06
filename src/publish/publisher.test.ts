@@ -162,6 +162,40 @@ describe("publisher tick", () => {
     db.close();
   });
 
+  test("L2 ladder-auto publishes risk<40 linkless posts WITHOUT an approval; risk>=40 held", async () => {
+    const db = freshDb();
+    const { draftId } = await setupApprovedScheduledDraft(db);
+    db.run("DELETE FROM approvals WHERE draft_id = ?", [draftId]);
+    db.run("UPDATE drafts SET risk_score = 30 WHERE id = ?", [draftId]);
+    db.run("UPDATE settings SET value='2' WHERE key='max_autonomy_level'");
+    db.run("INSERT INTO autonomy_state (platform, content_class, level) VALUES ('x', 'evergreen_tip', 2)");
+    const { adapter, posted } = fakeAdapter();
+    const report = await publishTick(db, new Map([["x", adapter]]));
+    expect(report.sent).toBe(1);
+    expect(posted).toHaveLength(1);
+
+    // risk 55 auto is refused
+    const second = await setupApprovedScheduledDraft(db, "another auto candidate but risk is above the bar");
+    db.run("DELETE FROM approvals WHERE draft_id = ?", [second.draftId]);
+    db.run("UPDATE drafts SET risk_score = 55 WHERE id = ?", [second.draftId]);
+    const r2 = await publishTick(db, new Map([["x", adapter]]));
+    expect(r2.held).toBe(1);
+    expect(heldReason(db)).toContain("risk=55");
+    db.close();
+  });
+
+  test("L1 never auto-publishes without approval even at risk 5", async () => {
+    const db = freshDb();
+    const { draftId } = await setupApprovedScheduledDraft(db);
+    db.run("DELETE FROM approvals WHERE draft_id = ?", [draftId]);
+    db.run("UPDATE drafts SET risk_score = 5 WHERE id = ?", [draftId]);
+    db.run("INSERT INTO autonomy_state (platform, content_class, level) VALUES ('x', 'evergreen_tip', 1)");
+    const { adapter } = fakeAdapter();
+    const report = await publishTick(db, new Map([["x", adapter]]));
+    expect(report.held).toBe(1);
+    db.close();
+  });
+
   test("adapter failure after consume => held for verify-then-retry, never re-sent blindly", async () => {
     const db = freshDb();
     await setupApprovedScheduledDraft(db);
