@@ -142,6 +142,16 @@ export async function main(argv: string[]): Promise<number> {
     }
     case "connect": {
       const which = rest[0] ?? "all";
+      if (which === "linkedin" && rest[1] === "authorize") {
+        const { authorizeLinkedIn } = await import("./connectors/linkedin-oauth.ts");
+        try {
+          await authorizeLinkedIn();
+          return 0;
+        } catch (err) {
+          console.error(`linkedin authorize failed: ${err instanceof Error ? err.message : String(err)}`);
+          return 1;
+        }
+      }
       const db = openAndMigrate();
       try {
         const { validateBeeper, validateLinkedIn, validateNostr, validateTelegram, validateX } = await import(
