@@ -9,8 +9,6 @@ import { ensureSource, getCursor, setCursor, storeMessages } from "./ingest/stor
 import { importLinkedInExport, importXArchive } from "./ingest/archives.ts";
 
 const PHASE_STUBS: Record<string, string> = {
-  connect: "Phase 3",
-  score: "Phase 3",
   scan: "Phase 4",
   engine: "Phase 5",
   metrics: "Phase 6",
@@ -140,6 +138,72 @@ export async function main(argv: string[]): Promise<number> {
           return 0;
         }
         console.error("usage: foghorn profile <build [--force] | show [version] | ratify <version>>");
+        return 1;
+      } finally {
+        db.close();
+      }
+    }
+    case "connect": {
+      const which = rest[0] ?? "all";
+      const db = openAndMigrate();
+      try {
+        const { validateBeeper, validateLinkedIn, validateNostr, validateTelegram, validateX } = await import(
+          "./connectors/validators.ts"
+        );
+        const runners: Record<string, () => Promise<import("./connectors/index.ts").ConnectResult>> = {
+          beeper: () => validateBeeper(),
+          telegram: () => validateTelegram(),
+          x: () => validateX(db),
+          linkedin: () => validateLinkedIn(),
+          nostr: () => validateNostr(),
+        };
+        const names = which === "all" ? Object.keys(runners) : [which];
+        let allOk = true;
+        for (const name of names) {
+          const runner = runners[name];
+          if (!runner) { console.error(`unknown connector '${name}'`); return 1; }
+          const result = await runner();
+          allOk &&= result.ok;
+          console.log(`\n${result.ok ? "OK " : "FAIL"} ${result.connector}`);
+          for (const c of result.checks) console.log(`  ${c.ok ? "✓" : "✗"} ${c.name}: ${c.detail}`);
+        }
+        return allOk ? 0 : 1;
+      } finally {
+        db.close();
+      }
+    }
+    case "score": {
+      const sub = rest[0];
+      const db = openAndMigrate();
+      try {
+        if (sub === "build") {
+          const { generateTextResilient } = await import("./llm/generate.ts");
+          const { scorePlatforms } = await import("./select/platform-scorer.ts");
+          const result = await scorePlatforms(db, (opts) => generateTextResilient(db, opts));
+          console.log(JSON.stringify(result, null, 2));
+          console.log("\nratify with: foghorn score ratify <platform>");
+          return 0;
+        }
+        if (sub === "show") {
+          const rows = db
+            .query<{ platform: string; composite: number; ratified: number; evidence_json: string; scored_at: string }, []>(
+              "SELECT platform, composite, ratified, evidence_json, scored_at FROM platform_scores ORDER BY scored_at DESC, composite DESC LIMIT 12",
+            )
+            .all();
+          if (rows.length === 0) { console.log("no score runs yet — run: foghorn score build"); return 0; }
+          for (const r of rows) {
+            const ev = JSON.parse(r.evidence_json) as { rationale?: string };
+            console.log(`${r.ratified ? "★" : " "} ${r.platform.padEnd(10)} ${String(r.composite).padStart(3)}  ${ev.rationale ?? ""}`);
+          }
+          return 0;
+        }
+        if (sub === "ratify" && rest[1]) {
+          const { ratifyPlatform } = await import("./select/platform-scorer.ts");
+          ratifyPlatform(db, rest[1]);
+          console.log(`platform '${rest[1]}' ratified as primary target`);
+          return 0;
+        }
+        console.error("usage: foghorn score <build | show | ratify <platform>>");
         return 1;
       } finally {
         db.close();
