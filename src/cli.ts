@@ -10,7 +10,6 @@ import { importLinkedInExport, importXArchive } from "./ingest/archives.ts";
 
 const PHASE_STUBS: Record<string, string> = {
   connect: "Phase 3",
-  profile: "Phase 2",
   score: "Phase 3",
   scan: "Phase 4",
   engine: "Phase 5",
@@ -99,6 +98,48 @@ export async function main(argv: string[]): Promise<number> {
           return 0;
         }
         console.error("usage: foghorn ingest <beeper | x-archive <path.zip|dir> | linkedin <path.zip|dir>>");
+        return 1;
+      } finally {
+        db.close();
+      }
+    }
+    case "profile": {
+      const sub = rest[0];
+      const db = openAndMigrate();
+      try {
+        if (sub === "build") {
+          const { generateTextResilient } = await import("./llm/generate.ts");
+          const { buildProfiles } = await import("./profile/profiler.ts");
+          const result = await buildProfiles(
+            db,
+            (opts) => generateTextResilient(db, opts),
+            { force: rest.includes("--force") },
+          );
+          console.log(JSON.stringify(result));
+          return result.built || result.reason ? 0 : 1;
+        }
+        if (sub === "show") {
+          const version = rest[1] ? Number(rest[1]) : undefined;
+          const rows = db
+            .query<{ version: number; kind: string; json: string; active: number; built_at: string }, []>(
+              "SELECT version, kind, json, active, built_at FROM profiles ORDER BY version, kind",
+            )
+            .all()
+            .filter((r) => version === undefined || r.version === version);
+          if (rows.length === 0) { console.log("no profiles yet — run: foghorn profile build"); return 0; }
+          for (const r of rows) {
+            console.log(`\n=== v${r.version} ${r.kind}${r.active ? " [ACTIVE]" : ""} (${r.built_at}) ===`);
+            console.log(JSON.stringify(JSON.parse(r.json), null, 2).slice(0, 2000));
+          }
+          return 0;
+        }
+        if (sub === "ratify" && rest[1]) {
+          const { ratifyProfiles } = await import("./profile/profiler.ts");
+          ratifyProfiles(db, Number(rest[1]));
+          console.log(`profiles v${rest[1]} ratified as active`);
+          return 0;
+        }
+        console.error("usage: foghorn profile <build [--force] | show [version] | ratify <version>>");
         return 1;
       } finally {
         db.close();
