@@ -4,10 +4,12 @@ import { openAndMigrate } from "./db/index.ts";
 import { isPaused, pause, resume } from "./killswitch.ts";
 import { capStatus } from "./spend/ledger.ts";
 import { publishTick } from "./publish/publisher.ts";
+import { BeeperSource } from "./ingest/beeper.ts";
+import { ensureSource, getCursor, setCursor, storeMessages } from "./ingest/store.ts";
+import { importLinkedInExport, importXArchive } from "./ingest/archives.ts";
 
 const PHASE_STUBS: Record<string, string> = {
   connect: "Phase 3",
-  ingest: "Phase 1",
   profile: "Phase 2",
   score: "Phase 3",
   scan: "Phase 4",
@@ -71,6 +73,36 @@ export async function main(argv: string[]): Promise<number> {
       console.log("resumed");
       db.close();
       return 0;
+    }
+    case "ingest": {
+      const sub = rest[0];
+      const db = openAndMigrate();
+      try {
+        if (sub === "beeper") {
+          if (isPaused(db)) { console.log("paused — collector idle"); return 0; }
+          const sourceId = ensureSource(db, "beeper", JSON.stringify({ chatType: "group" }));
+          const source = new BeeperSource();
+          const result = await source.pull(getCursor(db, sourceId));
+          const report = storeMessages(db, sourceId, result.messages);
+          if (result.cursor) setCursor(db, sourceId, result.cursor);
+          console.log(JSON.stringify({ pulled: result.messages.length, ...report }));
+          return 0;
+        }
+        if (sub === "x-archive" && rest[1]) {
+          ensureSource(db, "x_archive", JSON.stringify({ path: rest[1] }));
+          console.log(JSON.stringify(importXArchive(db, rest[1])));
+          return 0;
+        }
+        if (sub === "linkedin" && rest[1]) {
+          ensureSource(db, "linkedin_export", JSON.stringify({ path: rest[1] }));
+          console.log(JSON.stringify(importLinkedInExport(db, rest[1])));
+          return 0;
+        }
+        console.error("usage: foghorn ingest <beeper | x-archive <path.zip|dir> | linkedin <path.zip|dir>>");
+        return 1;
+      } finally {
+        db.close();
+      }
     }
     case "publish-tick": {
       const db = openAndMigrate();

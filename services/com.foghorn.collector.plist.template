@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template — installed by services/install.sh once Beeper is signed in (Phase 1 user action). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.foghorn.collector</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>cd __FOGHORN_ROOT__ &amp;&amp; exec bun run foghorn.ts ingest beeper</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>900</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/foghorn/collector.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/foghorn/collector.log</string>
+</dict>
+</plist>
