@@ -45,6 +45,11 @@ bun test                         # unit + structural tests
 - [x] OpenRouter as an alternate LLM provider (DeepSeek V4-Pro/Flash default, GLM-5.2 alternate; `FOGHORN_LLM_PROVIDER` or auto-detect)
 - [ ] dashboard (queue/trends/ladder/spend UI) · [ ] 8 learn loop + weekly report · [ ] 9 autonomy ramp
 
+## Reference
+
+- Privacy policy (for LinkedIn app registration's required field): [PRIVACY.md](PRIVACY.md),
+  published live at https://gist.github.com/adamrmatar/6e97e8131a834c4e04469fce1e2aec87
+
 ## Onboarding (user actions before first live run)
 
 1. Install Beeper Desktop, sign in, Settings → Developers → token into `.env.local` (`BEEPER_ACCESS_TOKEN`)
