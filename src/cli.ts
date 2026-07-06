@@ -9,7 +9,6 @@ import { ensureSource, getCursor, setCursor, storeMessages } from "./ingest/stor
 import { importLinkedInExport, importXArchive } from "./ingest/archives.ts";
 
 const PHASE_STUBS: Record<string, string> = {
-  scan: "Phase 4",
   engine: "Phase 5",
   metrics: "Phase 6",
   report: "Phase 8",
@@ -205,6 +204,47 @@ export async function main(argv: string[]): Promise<number> {
         }
         console.error("usage: foghorn score <build | show | ratify <platform>>");
         return 1;
+      } finally {
+        db.close();
+      }
+    }
+    case "watch": {
+      const db = openAndMigrate();
+      try {
+        const { addCreator, listCreators } = await import("./research/watchlist.ts");
+        if (rest[0] === "add" && rest[1] && rest[2]) {
+          const id = addCreator(db, rest[1], rest[2], rest[3]);
+          console.log(`watching ${rest[2]} on ${rest[1]} (id ${id})`);
+          return 0;
+        }
+        if (rest[0] === "list" || rest[0] === undefined) {
+          for (const c of listCreators(db)) {
+            const b = JSON.parse(c.baseline_json) as { n?: number; median?: number };
+            console.log(`#${c.id} ${c.platform}/@${c.handle} ${c.niche_tag ?? ""} baseline(n=${b.n ?? 0}, median=${b.median ?? 0})`);
+          }
+          return 0;
+        }
+        console.error("usage: foghorn watch <add <platform> <handle> [niche] | list>");
+        return 1;
+      } finally {
+        db.close();
+      }
+    }
+    case "scan": {
+      const db = openAndMigrate();
+      try {
+        if (isPaused(db)) { console.log("paused — scanner idle"); return 0; }
+        const { ratifiedPlatform } = await import("./select/platform-scorer.ts");
+        const platform = rest[0] ?? ratifiedPlatform(db);
+        if (!platform) { console.error("no ratified platform — run 'foghorn score ratify <platform>' or pass one"); return 1; }
+        const { generateWithWebSearch } = await import("./llm/websearch.ts");
+        const { scanTrends, freshTrendCards } = await import("./research/trend-scanner.ts");
+        const report = await scanTrends(db, (opts) => generateWithWebSearch(db, opts), platform);
+        console.log(JSON.stringify(report));
+        for (const card of freshTrendCards(db, platform, 6)) {
+          console.log(`  [${card.format}] ${card.title} — ${card.summary}`);
+        }
+        return 0;
       } finally {
         db.close();
       }
