@@ -1,6 +1,10 @@
 // Per-stage model tiers (drydock src/config/models.ts pattern).
 // Override per stage with FOGHORN_MODEL_<STAGE>, globally with FOGHORN_MODEL.
 // Documented cost knob: FOGHORN_MODEL_SCAN=claude-sonnet-5 cuts the biggest line item.
+//
+// Provider is a separate axis from model: FOGHORN_LLM_PROVIDER=openrouter (or
+// auto-detect on OPENROUTER_API_KEY) swaps the TIER default only -- explicit
+// per-stage/global model overrides above still win regardless of provider.
 
 export type Stage =
   | "scan"
@@ -37,9 +41,28 @@ const STAGE_TIER: Record<Stage, Tier> = {
   orchestrate: "light",
 };
 
-const TIER_MODEL: Record<Tier, string> = {
+export type Provider = "anthropic" | "openrouter";
+
+/** FOGHORN_LLM_PROVIDER wins outright; else auto-detect on OPENROUTER_API_KEY; else anthropic. */
+export function activeProvider(): Provider {
+  const explicit = process.env.FOGHORN_LLM_PROVIDER;
+  if (explicit === "openrouter" || explicit === "anthropic") return explicit;
+  return process.env.OPENROUTER_API_KEY ? "openrouter" : "anthropic";
+}
+
+const ANTHROPIC_TIER_MODEL: Record<Tier, string> = {
   reason: "claude-opus-4-8",
   light: "claude-haiku-4-5",
+};
+
+// Slugs + prices confirmed against openrouter.ai model pages 2026-07-06 --
+// marketplace pricing/slugs shift, re-verify before trusting long-term.
+// deepseek-v4-pro $0.435/$0.87 per MTok; deepseek-v4-flash $0.09/$0.18 (the
+// `:free` variant was pulled -- do not rely on it). z-ai/glm-5.2 ($0.56/$1.76)
+// is a same-tier alternate, selectable via FOGHORN_MODEL_<STAGE> if preferred.
+const OPENROUTER_TIER_MODEL: Record<Tier, string> = {
+  reason: "deepseek/deepseek-v4-pro",
+  light: "deepseek/deepseek-v4-flash",
 };
 
 export function modelForStage(stage: Stage): string {
@@ -47,5 +70,6 @@ export function modelForStage(stage: Stage): string {
   if (perStage) return perStage;
   const global = process.env.FOGHORN_MODEL;
   if (global) return global;
-  return TIER_MODEL[STAGE_TIER[stage]];
+  const tierModel = activeProvider() === "openrouter" ? OPENROUTER_TIER_MODEL : ANTHROPIC_TIER_MODEL;
+  return tierModel[STAGE_TIER[stage]];
 }

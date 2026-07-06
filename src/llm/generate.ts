@@ -1,14 +1,18 @@
-// Resilient text generation over the official Anthropic SDK, with the spend
-// ledger wired into every call. NEVER import this from src/publish/** —
-// tests/no-llm-in-publish.test.ts enforces that structurally.
+// Resilient text generation, dispatched by provider. NEVER import this from
+// src/publish/** — tests/no-llm-in-publish.test.ts enforces that structurally.
 //
 // Lessons encoded: maxOutputTokens floor 4000 (reasoning models silently eat
 // small budgets); whitespace-only responses retried once; SDK handles 429/5xx.
+//
+// generateTextResilient() is the ONE stable entry point every gate/create/
+// profile module calls -- provider selection (config/models.ts activeProvider())
+// happens inside it, so no call site needs to know or care which LLM answers.
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { Database } from "bun:sqlite";
-import { modelForStage, type Stage } from "../config/models.ts";
+import { activeProvider, modelForStage, type Stage } from "../config/models.ts";
 import { preflight, record, unitCost } from "../spend/ledger.ts";
+import { generateViaOpenRouter } from "./openrouter.ts";
 
 const MIN_OUTPUT_TOKENS = 4000;
 const DEFAULT_TIMEOUT_MS = 240_000;
@@ -43,6 +47,11 @@ function getClient(timeoutMs: number): Anthropic {
 }
 
 export async function generateTextResilient(db: Database, opts: GenerateOpts): Promise<GenerateResult> {
+  if (activeProvider() === "openrouter") return generateViaOpenRouter(db, opts);
+  return generateViaAnthropic(db, opts);
+}
+
+async function generateViaAnthropic(db: Database, opts: GenerateOpts): Promise<GenerateResult> {
   const model = modelForStage(opts.stage);
   const maxTokens = Math.max(opts.maxOutputTokens ?? 8192, MIN_OUTPUT_TOKENS);
 
