@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template — installed by services/install.sh in Phase 6, NOT loaded in Phase 0. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.foghorn.publisher</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>cd __FOGHORN_ROOT__ &amp;&amp; exec bun run foghorn.ts publish-tick</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>60</integer>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/foghorn/publisher.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/foghorn/publisher.log</string>
+</dict>
+</plist>
