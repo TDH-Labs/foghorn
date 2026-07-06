@@ -7,6 +7,7 @@
 import type { Database } from "bun:sqlite";
 import { getSetting, setSetting } from "../config/settings.ts";
 import { isPaused, pause, resume } from "../killswitch.ts";
+import { ratifyPromotion } from "../autonomy/ladder.ts";
 import { recordDecision, renderApproval } from "./queue.ts";
 
 interface TgResponse<T> {
@@ -127,7 +128,9 @@ export async function pollOnce(db: Database, fetchImpl: typeof fetch = fetch, ti
         decisions++;
         outcome = result.ok
           ? `${action === "ap" ? "✅ approved" : "❌ rejected"} — ${result.detail}` +
-            (result.promotionOffer ? `\n🎓 clean streak reached: reply "promote" to consider L${result.promotionOffer}` : "")
+            (result.promotionOffer
+              ? `\n🎓 clean streak reached: reply "promote ${result.platform}/${result.contentClass}" to raise this to L${result.promotionOffer}`
+              : "")
           : `⚠ ${result.detail}`;
       }
       await tg(fetchImpl, "answerCallbackQuery", { callback_query_id: cq.id, text: outcome.slice(0, 190) }).catch(() => {});
@@ -159,6 +162,26 @@ export async function pollOnce(db: Database, fetchImpl: typeof fetch = fetch, ti
           chat_id: u.message.chat.id,
           text: `paused=${isPaused(db)} pending_approvals=${pendingN} open_holds=${holdsN}`,
         }).catch(() => {});
+        commands++;
+      } else if (/^promote\s+\S+\/\S+$/i.test(text)) {
+        const [, platform, contentClass] = /^promote\s+(\S+)\/(\S+)$/i.exec(text)!;
+        const current = db
+          .query<{ level: number }, [string, string]>(
+            "SELECT level FROM autonomy_state WHERE platform = ? AND content_class = ?",
+          )
+          .get(platform!, contentClass!);
+        let reply: string;
+        if (!current) {
+          reply = `no autonomy state for ${platform}/${contentClass} yet`;
+        } else {
+          try {
+            ratifyPromotion(db, platform!, contentClass!, current.level + 1);
+            reply = `🎓 promoted ${platform}/${contentClass} to L${current.level + 1}`;
+          } catch (err) {
+            reply = `promotion failed: ${err instanceof Error ? err.message : String(err)}`;
+          }
+        }
+        await tg(fetchImpl, "sendMessage", { chat_id: u.message.chat.id, text: reply }).catch(() => {});
         commands++;
       }
     }

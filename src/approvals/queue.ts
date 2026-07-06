@@ -114,6 +114,8 @@ export interface DecisionResult {
   detail: string;
   scheduled?: boolean;
   promotionOffer?: number | null;
+  platform?: string;
+  contentClass?: string;
 }
 
 export function recordDecision(
@@ -152,9 +154,15 @@ export function recordDecision(
   const level = effectiveLevel(db, row.platform, row.content_class);
   if (level >= 1) {
     scheduleDraft(db, row.draft_id);
-    return { ok: true, detail: "approved + scheduled", scheduled: true, promotionOffer: promotion.offerPromotionTo };
+    return {
+      ok: true, detail: "approved + scheduled", scheduled: true,
+      promotionOffer: promotion.offerPromotionTo, platform: row.platform, contentClass: row.content_class,
+    };
   }
-  return { ok: true, detail: "approved (SHADOW — not scheduled at L0)", scheduled: false, promotionOffer: promotion.offerPromotionTo };
+  return {
+    ok: true, detail: "approved (SHADOW — not scheduled at L0)", scheduled: false,
+    promotionOffer: promotion.offerPromotionTo, platform: row.platform, contentClass: row.content_class,
+  };
 }
 
 /** Unanswered approvals expire to holds — nothing publishes stale. */

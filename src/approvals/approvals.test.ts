@@ -202,6 +202,58 @@ describe("telegram approval loop", () => {
     db.close();
   });
 
+  test('a "promote PLATFORM/CLASS" reply actually ratifies the offered promotion (previously a dead end)', async () => {
+    const db = freshDb();
+    ratifyPromotion(db, "x", "opinion_take", 1); // start at L1 so a streak means something
+
+    let lastCalls: { method: string; body: Record<string, unknown> }[] = [];
+    for (let i = 0; i < 10; i++) {
+      const { approvalId } = insertAwaitingDraft(db, `post number ${i} about verifier design patterns`);
+      const nonce = db.query<{ nonce: string }, [number]>("SELECT nonce FROM approvals WHERE id=?").get(approvalId)!.nonce;
+      const { fetchImpl, calls } = fakeTelegram([
+        {
+          update_id: 100 + i,
+          callback_query: {
+            id: `cb${i}`, from: { id: 7078451053 },
+            message: { message_id: 1, chat: { id: 7078451053 } },
+            data: `a:${approvalId}:ap:${nonce}`,
+          },
+        },
+      ]);
+      await pollOnce(db, fetchImpl, 0);
+      lastCalls = calls;
+    }
+
+    // 10th clean approval offers promotion; message must be a parseable command, not just prose
+    const answerCall = lastCalls.find((c) => c.method === "answerCallbackQuery")!;
+    expect(String(answerCall.body.text)).toContain("promote x/opinion_take");
+    expect(effectiveLevel(db, "x", "opinion_take")).toBe(1); // offered, not yet ratified
+
+    // Reply with exactly the text the bot suggested
+    db.run("UPDATE settings SET value='3' WHERE key='max_autonomy_level'"); // raise ceiling so L2 is reachable
+    const { fetchImpl: promoteFetch, calls: promoteCalls } = fakeTelegram([
+      { update_id: 200, message: { message_id: 2, chat: { id: 7078451053 }, text: "promote x/opinion_take" } },
+    ]);
+    const report = await pollOnce(db, promoteFetch, 0);
+    expect(report.commands).toBe(1);
+    expect(effectiveLevel(db, "x", "opinion_take")).toBe(2);
+    const sendCall = promoteCalls.find((c) => c.method === "sendMessage")!;
+    expect(String(sendCall.body.text)).toContain("promoted x/opinion_take to L2");
+    db.close();
+  });
+
+  test('"promote" for a platform/class with no autonomy state yet replies clearly instead of crashing', async () => {
+    const db = freshDb();
+    const { fetchImpl, calls } = fakeTelegram([
+      { update_id: 1, message: { message_id: 1, chat: { id: 7078451053 }, text: "promote nostr/thread_deep_dive" } },
+    ]);
+    const report = await pollOnce(db, fetchImpl, 0);
+    expect(report.commands).toBe(1);
+    const sendCall = calls.find((c) => c.method === "sendMessage")!;
+    expect(String(sendCall.body.text)).toContain("no autonomy state");
+    db.close();
+  });
+
   test("'pause' text command from the approver chat pauses the kill switch", async () => {
     const db = freshDb();
     const { fetchImpl } = fakeTelegram([
