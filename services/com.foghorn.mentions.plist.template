@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template — mention collection + triage + reply drafting every 30 min (Phase 7). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.foghorn.mentions</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>cd __FOGHORN_ROOT__ &amp;&amp; exec bun run foghorn.ts replies</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>1800</integer>
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/foghorn/mentions.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/foghorn/mentions.log</string>
+</dict>
+</plist>

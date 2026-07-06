@@ -14,6 +14,7 @@ import {
   gateSecretsPii,
 } from "./gates/deterministic.ts";
 import { gateLinks } from "./gates/links.ts";
+import { gateReplyThread } from "./gates/reply.ts";
 import {
   gateClaimsEvidence,
   gateHallucination,
@@ -32,6 +33,7 @@ export function buildFastGates(db: Database, fetchImpl: typeof fetch = fetch): G
     gateDedup(db),
     gateCadence(db),
     gateMediaRights(),
+    gateReplyThread(db), // n/a for non-reply content classes
   ];
 }
 

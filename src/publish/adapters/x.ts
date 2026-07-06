@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { oauth1Header, type OAuth1Creds } from "../../connectors/oauth1.ts";
 import type { OwnPost, PlatformAdapter, PostReceipt } from "./adapter.ts";
 
-function credsFromEnv(): OAuth1Creds {
+export function credsFromEnv(): OAuth1Creds {
   const missing = ["X_API_KEY", "X_API_KEY_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"].filter(
     (k) => !process.env[k],
   );

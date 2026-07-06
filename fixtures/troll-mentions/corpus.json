@@ -1,0 +1,12 @@
+{
+  "note": "Reply-triage fixtures. Each case pairs a realistic mention with the class a correct judge should assign. Automated tests exercise the mechanism with canned judge outputs matching these expected classes; running this corpus against a LIVE model is the recommended smoke test once API keys exist (foghorn does not yet have a `diagnose`-style harness for this -- Phase 8).",
+  "cases": [
+    { "name": "sincere-question", "expectTriage": "value_add", "text": "How do you actually enforce the anti-tamper check -- is it just a length diff or something smarter?" },
+    { "name": "praise", "expectTriage": "ack", "text": "This is such a clean way to think about gating agent output. Saving this thread." },
+    { "name": "hostile-troll", "expectTriage": "boundary", "text": "lol you clearly have no idea what you're talking about, this whole thread is cope for people who can't code" },
+    { "name": "bait-farming", "expectTriage": "no_reply", "text": "Unpopular opinion: anyone still building 'AI safety' theater in 2026 is just bad at their job. Fight me." },
+    { "name": "dogpile-followup", "expectTriage": "no_reply", "text": "+1 to what everyone else already said, you really dropped the ball here" },
+    { "name": "ambiguous-sarcasm", "expectTriage": "no_reply", "text": "oh sure, because THAT'S never gone wrong before 🙄" },
+    { "name": "genuine-disagreement", "expectTriage": "value_add", "text": "I think the risk-gate threshold is too conservative -- 60 seems low for escalation given how often it'll false-positive on normal opinions" }
+  ]
+}

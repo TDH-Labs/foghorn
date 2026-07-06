@@ -284,6 +284,25 @@ export async function main(argv: string[]): Promise<number> {
         if (once) { db.close(); return 0; }
       }
     }
+    case "replies": {
+      const db = openAndMigrate();
+      try {
+        if (isPaused(db)) { console.log("paused — replies idle"); return 0; }
+        const { ratifiedPlatform } = await import("./select/platform-scorer.ts");
+        const platform = rest[0] ?? ratifiedPlatform(db);
+        if (!platform) { console.error("no ratified platform — 'foghorn score ratify <platform>' first"); return 1; }
+        const { createMentionSources } = await import("./replies/sources/registry.ts");
+        const source = createMentionSources().get(platform);
+        if (!source) { console.error(`no mentions source for '${platform}' (missing creds, or not yet implemented)`); return 1; }
+        const { generateTextResilient } = await import("./llm/generate.ts");
+        const { runReplyEngine } = await import("./replies/reply-engine.ts");
+        const report = await runReplyEngine(db, { generate: (o) => generateTextResilient(db, o) }, platform, source);
+        console.log(JSON.stringify(report));
+        return 0;
+      } finally {
+        db.close();
+      }
+    }
     case "holds": {
       const db = openAndMigrate();
       try {
@@ -367,7 +386,7 @@ export async function main(argv: string[]): Promise<number> {
         return 1;
       }
       console.error(
-        "usage: foghorn <init|migrate|status|pause|resume|publish-tick|ingest|profile|score|scan|engine|connect|metrics|report|diagnose>",
+        "usage: foghorn <init|migrate|status|pause|resume|publish-tick|ingest|profile|score|scan|engine|replies|connect|metrics|undo|holds|report|diagnose>",
       );
       return verb ? 1 : 0;
     }

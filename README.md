@@ -41,7 +41,9 @@ bun test                         # unit + structural tests
 - [x] 5 create + 13 gates + fix loop/anti-tamper + Telegram approvals + bad-posts corpus
 - [x] 6 publish (X/Nostr/LinkedIn adapters, L2 auto path risk<40+linkless, undo, X metrics)
       — code-complete; live e2e (Nostr relay → burner X → real L1) blocked on credentials
-- [ ] dashboard (queue/trends/ladder/spend UI) · [ ] 7 reply engine · [ ] 8 learn loop + weekly report · [ ] 9 autonomy ramp
+- [x] 7 reply engine (X mentions collector, ack/value_add/boundary/no_reply triage, anti-pile-on + rate-limit gate, reuses full gate/ladder/approval stack)
+- [x] OpenRouter as an alternate LLM provider (DeepSeek V4-Pro/Flash default, GLM-5.2 alternate; `FOGHORN_LLM_PROVIDER` or auto-detect)
+- [ ] dashboard (queue/trends/ladder/spend UI) · [ ] 8 learn loop + weekly report · [ ] 9 autonomy ramp
 
 ## Onboarding (user actions before first live run)
 
