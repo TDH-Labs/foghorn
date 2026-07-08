@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Foghorn Control Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="dark-mode">
+  <div class="app-layout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">📯</span>
+          <span class="logo-text">FOGHORN</span>
+        </div>
+        <div class="badge-status">
+          <span class="dot green"></span> Running
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#dashboard" class="nav-item active" id="nav-dashboard">
+          <span class="nav-icon">📊</span> <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="#pipeline" class="nav-item" id="nav-pipeline">
+          <span class="nav-icon">🧱</span> <span class="nav-label">Pipeline Kanban</span>
+        </a>
+        <a href="#engine" class="nav-item" id="nav-engine">
+          <span class="nav-icon">⚙️</span> <span class="nav-label">Content Engine</span>
+        </a>
+        <a href="#approvals" class="nav-item" id="nav-approvals">
+          <span class="nav-icon">🤝</span> <span class="nav-label">Approvals Queue</span>
+          <span class="counter-badge" id="sidebar-approval-count" style="display: none;">0</span>
+        </a>
+        <a href="#evidence" class="nav-item" id="nav-evidence">
+          <span class="nav-icon">🗃️</span> <span class="nav-label">Evidence Bank</span>
+        </a>
+        <a href="#research" class="nav-item" id="nav-research">
+          <span class="nav-icon">🎯</span> <span class="nav-label">Research & Trends</span>
+        </a>
+        <a href="#profiles" class="nav-item" id="nav-profiles">
+          <span class="nav-icon">👤</span> <span class="nav-label">Voice Profiles</span>
+        </a>
+        <a href="#platforms" class="nav-item" id="nav-platforms">
+          <span class="nav-icon">🪐</span> <span class="nav-label">Platform Scorer</span>
+        </a>
+        <a href="#automations" class="nav-item" id="nav-automations">
+          <span class="nav-icon">⚡</span> <span class="nav-label">Automations</span>
+        </a>
+        <a href="#settings" class="nav-item" id="nav-settings">
+          <span class="nav-icon">🔧</span> <span class="nav-label">Settings</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="btn-killswitch" class="btn btn-danger btn-block">⏸ Pause Pipeline</button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Container -->
+    <main class="app-main">
+      
+      <!-- Top Bar / Header Info -->
+      <header class="main-header">
+        <div class="header-info">
+          <h1 id="page-title">Dashboard</h1>
+          <p id="page-subtitle" class="text-muted">System status and overview</p>
+        </div>
+
+        <div class="global-stats-row">
+          <div class="stat-gauge" id="stat-platform">
+            <span class="stat-label">Platform</span>
+            <span class="stat-value text-accent">—</span>
+          </div>
+          <div class="stat-gauge" id="stat-profile">
+            <span class="stat-label">Profile</span>
+            <span class="stat-value text-accent">—</span>
+          </div>
+          <div class="stat-gauge" id="stat-spend-llm">
+            <span class="stat-label">LLM Spend</span>
+            <div class="mini-progress-bar"><div class="fill green" style="width: 0%;"></div></div>
+            <span class="stat-value">$0.00 / $0.00</span>
+          </div>
+          <div class="stat-gauge" id="stat-spend-platform">
+            <span class="stat-label">Platform Spend</span>
+            <div class="mini-progress-bar"><div class="fill green" style="width: 0%;"></div></div>
+            <span class="stat-value">$0.00 / $0.00</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- View Sections -->
+      <div class="view-content" id="view-container">
+        <!-- Views will load here dynamically via SPA router -->
+        <div class="loader-container"><div class="spinner"></div></div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Toast Notification Box -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Interactive Ideation Modal Q&A -->
+  <div id="modal-ideate-qa" class="modal" style="display: none;">
+    <div class="modal-content glass">
+      <div class="modal-header">
+        <h2>Interactive Ideation Prompt</h2>
+        <button class="btn-close" id="modal-qa-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-prompt-desc">Clarifying question from content engine to draft a high-voice-score post:</p>
+        <div class="question-block" id="modal-qa-question">...</div>
+        <textarea id="modal-qa-answer" placeholder="Type your factual answer here (blank to skip)..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-qa-skip" class="btn btn-secondary">Skip (Stays Opinion-only)</button>
+        <button id="modal-qa-submit" class="btn btn-accent">Submit Answer</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

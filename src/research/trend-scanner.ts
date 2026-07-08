@@ -46,7 +46,7 @@ ${outperformers.length > 0 ? `Watchlist posts already detected outperforming (z>
 ${outperformers.map((o) => `- @${o.handle} z=${o.zscore.toFixed(1)}: ${o.textSnippet ?? ""} ${o.url ?? ""}`).join("\n")}` : ""}
 Research what is outperforming in this niche on ${platform} right now.`;
 
-  const { text } = await generate({ stage: "scan", prompt, system: SYSTEM, maxOutputTokens: 6000, maxSearches: 6 });
+  const { text } = await generate({ stage: "scan", prompt, system: SYSTEM, maxOutputTokens: 1500, maxSearches: 6 });
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end <= start) throw new Error("trend scanner: no JSON in output");

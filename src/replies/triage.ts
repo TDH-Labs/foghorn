@@ -26,7 +26,7 @@ export async function triageMention(generate: GenerateFn, text: string): Promise
     stage: "triage_reply",
     system: SYSTEM,
     prompt: `<mention>${text}</mention>`,
-    maxOutputTokens: 4000,
+    maxOutputTokens: 500,
   });
   const start = out.indexOf("{");
   const end = out.lastIndexOf("}");

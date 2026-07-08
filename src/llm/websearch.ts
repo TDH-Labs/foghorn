@@ -40,7 +40,7 @@ async function generateWithWebSearchAnthropic(db: Database, opts: WebSearchOpts)
   const client = new Anthropic({ timeout: 600_000, maxRetries: 2 });
   const response = await client.messages.create({
     model,
-    max_tokens: Math.max(opts.maxOutputTokens ?? 8192, 4000),
+    max_tokens: Math.max(opts.maxOutputTokens ?? 1500, 1000),
     ...(opts.system ? { system: opts.system } : {}),
     tools: [{ type: "web_search_20260209" as const, name: "web_search" as const, max_uses: maxSearches }],
     messages: [{ role: "user", content: opts.prompt }],
@@ -112,7 +112,7 @@ async function generateWithWebSearchOpenRouter(
     body: JSON.stringify({
       model,
       messages,
-      max_tokens: Math.max(opts.maxOutputTokens ?? 8192, 4000),
+      max_tokens: Math.max(opts.maxOutputTokens ?? 1500, 1000),
       tools: [{ type: "openrouter:web_search", parameters: { engine: "auto", max_results: maxResults } }],
     }),
     signal: AbortSignal.timeout(600_000),

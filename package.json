@@ -9,6 +9,7 @@
   },
   "scripts": {
     "cli": "bun run foghorn.ts",
+    "dashboard": "bun dashboard/server.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },

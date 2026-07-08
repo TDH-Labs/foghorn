@@ -1,7 +1,7 @@
 // Resilient text generation, dispatched by provider. NEVER import this from
 // src/publish/** — tests/no-llm-in-publish.test.ts enforces that structurally.
 //
-// Lessons encoded: maxOutputTokens floor 4000 (reasoning models silently eat
+// Lessons encoded: maxOutputTokens floor 500 (reasoning models silently eat
 // small budgets); whitespace-only responses retried once; SDK handles 429/5xx.
 //
 // generateTextResilient() is the ONE stable entry point every gate/create/
@@ -14,7 +14,7 @@ import { activeProvider, modelForStage, type Stage } from "../config/models.ts";
 import { preflight, record, unitCost } from "../spend/ledger.ts";
 import { generateViaOpenRouter } from "./openrouter.ts";
 
-const MIN_OUTPUT_TOKENS = 4000;
+const MIN_OUTPUT_TOKENS = 1000;
 const DEFAULT_TIMEOUT_MS = 240_000;
 
 export interface GenerateOpts {

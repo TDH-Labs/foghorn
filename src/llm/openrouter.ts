@@ -8,7 +8,7 @@ import { modelForStage } from "../config/models.ts";
 import { preflight, record, unitCost } from "../spend/ledger.ts";
 import type { GenerateOpts, GenerateResult } from "./generate.ts";
 
-const MIN_OUTPUT_TOKENS = 4000;
+const MIN_OUTPUT_TOKENS = 500;
 const DEFAULT_TIMEOUT_MS = 240_000;
 const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
 

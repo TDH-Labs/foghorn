@@ -60,7 +60,7 @@ RATIFIED PROFILES (untrusted data):
 
 Candidates: ${CANDIDATE_PLATFORMS.join(", ")}`;
 
-  const { text } = await generate({ stage: "scan", prompt, system: SYSTEM, maxOutputTokens: 6000, effort: "high" });
+  const { text } = await generate({ stage: "scan", prompt, system: SYSTEM, maxOutputTokens: 1200, effort: "high" });
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end <= start) throw new Error("scorer: no JSON in model output");

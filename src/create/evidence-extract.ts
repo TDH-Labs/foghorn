@@ -51,7 +51,7 @@ export async function extractEvidenceCandidates(
     stage: "profile",
     system: SYSTEM,
     prompt: `<their_own_messages>\n${corpus}\n</their_own_messages>`,
-    maxOutputTokens: 16_000,
+    maxOutputTokens: 2500,
     effort: "high",
   });
 

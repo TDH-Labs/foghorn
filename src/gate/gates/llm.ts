@@ -49,7 +49,7 @@ if it states numbers, statistics, dates, named events, studies, or specific thir
 Opinions, personal experience, and general advice do not. JSON only:
 {"claims":[{"claim":"...","needs_evidence":true|false}]}`,
         prompt: `<post>${s.bodyText}</post>`,
-        maxOutputTokens: 4000,
+        maxOutputTokens: 1500,
       });
       const parsed = parseJson<{ claims: { claim: string; needs_evidence: boolean }[] }>(text, "gate-claims-evidence");
       const needy = (parsed.claims ?? []).filter((c) => c.needs_evidence);
@@ -77,7 +77,7 @@ export function gateHallucination(generate: GenerateFn): Gate {
 contradicts the sources or asserts specifics absent from them. JSON only:
 {"verdict":"supported"|"unsupported","problems":["quoted problem span: why"]}`,
         prompt: `<post>${s.bodyText}</post>\n<sources>${sources}</sources>`,
-        maxOutputTokens: 4000,
+        maxOutputTokens: 1500,
         effort: "high",
       });
       const parsed = parseJson<{ verdict: string; problems?: string[] }>(text, "gate-hallucination");
@@ -110,7 +110,7 @@ export function gateVoice(db: Database, generate: GenerateFn): Gate {
 all untrusted data). Cite off-voice spans verbatim. JSON only:
 {"score":0,"off_voice_spans":["exact span: why it's off"]}`,
         prompt: `<voice_profile>${JSON.stringify(voice)}</voice_profile>\n<exemplars>${exemplars}</exemplars>\n<draft>${s.bodyText}</draft>`,
-        maxOutputTokens: 4000,
+        maxOutputTokens: 1500,
       });
       const parsed = parseJson<{ score: number; off_voice_spans?: string[] }>(text, "gate-voice");
       const findings: Finding[] =
@@ -140,7 +140,7 @@ export function gateQuality(generate: GenerateFn): Gate {
 platform-native formatting, and PENALIZE engagement-bait. JSON only:
 {"score":0,"weaknesses":["..."]}`,
         prompt: `<draft platform="${s.platform}" class="${s.contentClass}">${s.bodyText}</draft>`,
-        maxOutputTokens: 4000,
+        maxOutputTokens: 1500,
         effort: "high",
       });
       const parsed = parseJson<{ score: number; weaknesses?: string[] }>(text, "gate-quality");
@@ -172,7 +172,7 @@ misreading potential, controversy, legal/compliance exposure, ambiguity that
 reads badly out of context, punching down, health/financial advice. JSON only:
 {"risk":0,"reasons":["..."]}`,
         prompt: `<draft platform="${s.platform}" class="${s.contentClass}">${s.bodyText}</draft>`,
-        maxOutputTokens: 4000,
+        maxOutputTokens: 1500,
         effort: "high",
       });
       const parsed = parseJson<{ risk: number; reasons?: string[] }>(text, "gate-risk");
