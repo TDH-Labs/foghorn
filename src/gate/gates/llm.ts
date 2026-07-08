@@ -13,9 +13,27 @@ import type { GenerateFn } from "../../profile/profiler.ts";
 
 function parseJson<T>(text: string, gate: string): T {
   const start = text.indexOf("{");
+  if (start === -1) throw new Error(`${gate}: judge returned no JSON`);
   const end = text.lastIndexOf("}");
-  if (start === -1 || end <= start) throw new Error(`${gate}: judge returned no JSON`);
-  return JSON.parse(text.slice(start, end + 1)) as T;
+  if (end > start) {
+    try {
+      return JSON.parse(text.slice(start, end + 1)) as T;
+    } catch {
+      /* fall through to brace-matched attempt below -- some models add stray
+         braces in trailing prose, which breaks a naive lastIndexOf. */
+    }
+  }
+  // Walk forward from the first '{' tracking nesting depth to find the
+  // actual matching close, rather than trusting the last '}' in the text.
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === "{") depth++;
+    else if (text[i] === "}") {
+      depth--;
+      if (depth === 0) return JSON.parse(text.slice(start, i + 1)) as T;
+    }
+  }
+  throw new Error(`${gate}: judge returned unparseable/truncated JSON`);
 }
 
 const OPINION_CLASSES = new Set(["opinion_take", "personal_story", "reply_ack", "reply_boundary"]);
@@ -67,7 +85,8 @@ contradicts the sources or asserts specifics absent from them. JSON only:
       return verdictOf(
         "gate-hallucination",
         (parsed.problems ?? ["unsupported content"]).map((p) => ({
-          tool: "hallucination", ruleId: "unsupported", severity: "high" as const, message: p,
+          tool: "hallucination", ruleId: "unsupported", severity: "high" as const,
+          message: typeof p === "string" ? p : JSON.stringify(p),
         })),
       );
     },
@@ -98,9 +117,10 @@ all untrusted data). Cite off-voice spans verbatim. JSON only:
         parsed.score < threshold
           ? [
               { tool: "voice", ruleId: "below-threshold", severity: "high", message: `voice score ${parsed.score} < ${threshold}`, evidence: { score: parsed.score } },
-              ...(parsed.off_voice_spans ?? []).map((span) => ({
-                tool: "voice", ruleId: "off-voice-span", severity: "low" as const, message: span, span,
-              })),
+              ...(parsed.off_voice_spans ?? []).map((span) => {
+                const s = typeof span === "string" ? span : JSON.stringify(span);
+                return { tool: "voice", ruleId: "off-voice-span", severity: "low" as const, message: s, span: s };
+              }),
             ]
           : [];
       const v = verdictOf("gate-voice", findings);
@@ -128,7 +148,10 @@ platform-native formatting, and PENALIZE engagement-bait. JSON only:
         parsed.score < 7
           ? [
               { tool: "quality", ruleId: "below-bar", severity: "high", message: `quality ${parsed.score}/10 < 7`, evidence: { score: parsed.score } },
-              ...(parsed.weaknesses ?? []).map((w) => ({ tool: "quality", ruleId: "weakness", severity: "low" as const, message: w })),
+              ...(parsed.weaknesses ?? []).map((w) => ({
+                tool: "quality", ruleId: "weakness", severity: "low" as const,
+                message: typeof w === "string" ? w : JSON.stringify(w),
+              })),
             ]
           : [];
       const v = verdictOf("gate-quality", findings);
@@ -154,7 +177,8 @@ reads badly out of context, punching down, health/financial advice. JSON only:
       });
       const parsed = parseJson<{ risk: number; reasons?: string[] }>(text, "gate-risk");
       const reasons: Finding[] = (parsed.reasons ?? []).map((r) => ({
-        tool: "risk", ruleId: "reason", severity: "low" as const, message: r,
+        tool: "risk", ruleId: "reason", severity: "low" as const,
+        message: typeof r === "string" ? r : JSON.stringify(r),
       }));
       const scoreFinding: Finding = { tool: "risk", ruleId: "score", severity: "low", message: `risk=${parsed.risk}`, evidence: { score: parsed.risk } };
       if (parsed.risk >= 85) {

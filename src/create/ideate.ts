@@ -5,6 +5,7 @@
 import type { Database } from "bun:sqlite";
 import type { GenerateFn } from "../profile/profiler.ts";
 import { activeProfile } from "../profile/profiler.ts";
+import { approvedEvidence } from "./evidence-bank.ts";
 import { freshTrendCards } from "../research/trend-scanner.ts";
 
 export interface Idea {
@@ -26,6 +27,7 @@ export async function ideate(db: Database, generate: GenerateFn, platform: strin
     .all()
     .map((r) => `- ${r.hypothesis}`)
     .join("\n");
+  const evidenceTopics = approvedEvidence(db).map((e) => `- [${e.topic}] ${e.fact}`);
 
   const { text } = await generate({
     stage: "ideate",
@@ -33,11 +35,20 @@ export async function ideate(db: Database, generate: GenerateFn, platform: strin
 Cross their strongest interests with the trend formats. JSON only:
 {"ideas":[{"angle":"one-line hook angle","brief":"3-5 sentences: the specific post to write,
 what makes it them, what evidence/experience to draw on","interest_tag":"...","trend_card_id":null}]}
-Exactly ${count} ideas, each concretely writable today, no generic advice.`,
+Exactly ${count} ideas, each concretely writable today, no generic advice.
+CRITICAL: a trend format that implies a specific number, incident, or case study (e.g. "I built X --
+here's the number", build-in-public financials, quantified before/after) is ONLY a valid angle if
+<available_evidence> below actually contains a matching fact -- reference which one in the brief. If
+none of the appealing trend formats have matching evidence, do NOT force a fabricated-sounding case
+study; propose a stance/opinion/framework angle instead (contrarian take, principle, framework) that
+needs no specific evidence.`,
     prompt: `Platform: ${platform}
 <persona>${JSON.stringify(persona)}</persona>
 <interests>${JSON.stringify(interests)}</interests>
 <trend_cards>${JSON.stringify(cards.map((c) => ({ id: c.id, title: c.title, summary: c.summary, format: c.format })))}</trend_cards>
+<available_evidence>
+${evidenceTopics.length > 0 ? evidenceTopics.join("\n") : "(none yet -- avoid case-study/specific-number angles entirely)"}
+</available_evidence>
 ${steering ? `<what_has_worked_for_them>\n${steering}\n</what_has_worked_for_them>` : ""}`,
     maxOutputTokens: 4000,
     effort: "high",

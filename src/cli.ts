@@ -238,6 +238,49 @@ export async function main(argv: string[]): Promise<number> {
         db.close();
       }
     }
+    case "evidence": {
+      const db = openAndMigrate();
+      try {
+        const { addEvidence, listEvidence, approveEvidence, rejectEvidence } = await import("./create/evidence-bank.ts");
+        if (rest[0] === "add" && rest[1] && rest[2]) {
+          const id = addEvidence(db, rest[1], rest.slice(2).join(" "));
+          console.log(`added evidence #${id} [${rest[1]}] (approved)`);
+          return 0;
+        }
+        if (rest[0] === "extract") {
+          const { generateTextResilient } = await import("./llm/generate.ts");
+          const { extractEvidenceCandidates } = await import("./create/evidence-extract.ts");
+          const result = await extractEvidenceCandidates(db, (opts) => generateTextResilient(db, opts));
+          console.log(JSON.stringify(result));
+          console.log("review with: foghorn evidence list pending");
+          return 0;
+        }
+        if (rest[0] === "approve" && rest[1]) {
+          approveEvidence(db, Number(rest[1]));
+          console.log(`approved #${rest[1]} — drafter can now cite it`);
+          return 0;
+        }
+        if (rest[0] === "reject" && rest[1]) {
+          rejectEvidence(db, Number(rest[1]));
+          console.log(`rejected #${rest[1]}`);
+          return 0;
+        }
+        if (rest[0] === "list" || rest[0] === undefined) {
+          const status = rest[1] === "pending" ? "proposed" : rest[1];
+          for (const e of listEvidence(db, status)) {
+            const src = e.source_quote ? `\n    ⤷ "${e.source_quote.slice(0, 100)}"` : "";
+            console.log(`#${e.id} [${e.status}] [${e.topic}] ${e.fact}${src}`);
+          }
+          return 0;
+        }
+        console.error(
+          'usage: foghorn evidence <add <topic> "<fact>" | extract | list [pending|approved|rejected] | approve <id> | reject <id>>',
+        );
+        return 1;
+      } finally {
+        db.close();
+      }
+    }
     case "scan": {
       const db = openAndMigrate();
       try {
@@ -268,6 +311,39 @@ export async function main(argv: string[]): Promise<number> {
         const { runEngine } = await import("./create/engine.ts");
         const report = await runEngine(db, { generate: (o) => generateTextResilient(db, o) }, platform);
         console.log(JSON.stringify(report));
+        return 0;
+      } finally {
+        db.close();
+      }
+    }
+    case "ideate-chat": {
+      const db = openAndMigrate();
+      try {
+        if (isPaused(db)) { console.log("paused — engine idle"); return 0; }
+        const { ratifiedPlatform } = await import("./select/platform-scorer.ts");
+        const platform = rest[0] ?? ratifiedPlatform(db);
+        if (!platform) { console.error("no ratified platform — 'foghorn score ratify <platform>' first"); return 1; }
+        const { generateTextResilient } = await import("./llm/generate.ts");
+        const { ideateChat } = await import("./create/ideate-chat.ts");
+        const { createInterface } = await import("node:readline/promises");
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        try {
+          const report = await ideateChat(
+            db,
+            { generate: (o) => generateTextResilient(db, o) },
+            platform,
+            async (q) => {
+              try {
+                return await rl.question(`\n${q}\n> `);
+              } catch {
+                return ""; // stdin closed early (EOF / ctrl-D) -- treat as skip, don't crash the run
+              }
+            },
+          );
+          console.log(`\n${JSON.stringify(report)}`);
+        } finally {
+          rl.close();
+        }
         return 0;
       } finally {
         db.close();
