@@ -34,7 +34,7 @@ describe("generateViaOpenRouter", () => {
 
     const result = await generateViaOpenRouter(db, { stage: "draft", prompt: "write something", system: "be terse" }, fake);
     expect(result.text).toBe("gates beat vibes");
-    expect(result.model).toBe("deepseek/deepseek-v4-pro");
+    expect(result.model).toBe("deepseek/deepseek-chat");
     expect(captured?.url).toBe("https://openrouter.ai/api/v1/chat/completions");
     expect(captured?.auth).toBe("Bearer sk-or-test");
     expect(captured?.body.messages).toEqual([
@@ -43,7 +43,7 @@ describe("generateViaOpenRouter", () => {
     ]);
     const ledger = db.query<{ provider: string; model: string }, []>("SELECT provider, model FROM spend_ledger").get();
     expect(ledger?.provider).toBe("openrouter");
-    expect(ledger?.model).toBe("deepseek/deepseek-v4-pro");
+    expect(ledger?.model).toBe("deepseek/deepseek-chat");
     db.close();
   });
 

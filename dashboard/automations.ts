@@ -98,7 +98,7 @@ export class AutomationRunner {
       const report = storeMessages(this.db, sourceId, result.messages);
       if (result.cursor) setCursor(this.db, sourceId, result.cursor);
       
-      this.onProgress(1, "completed", `Ingested ${result.messages.length} messages (${report.stored} stored, ${report.redacted} redacted)`);
+      this.onProgress(1, "completed", `Ingested ${result.messages.length} messages (${report.inserted} inserted, ${report.skippedDuplicates} duplicates skipped)`);
 
       // Step 3: Build Profiles
       this.currentStepIndex = 2;
@@ -136,7 +136,7 @@ export class AutomationRunner {
       }
 
       const scanRes = await scanTrends(this.db, (opts) => generateWithWebSearch(this.db, opts), platform);
-      this.onProgress(4, "completed", `Scanned ${platform}. Found ${scanRes.extracted} trends (${scanRes.saved} saved)`);
+      this.onProgress(4, "completed", `Scanned ${platform}. Found ${scanRes.inserted} new trend cards (${scanRes.skippedDuplicate} duplicates skipped)`);
 
       // Step 6: Extract Evidence
       this.currentStepIndex = 5;
@@ -178,7 +178,7 @@ export class AutomationRunner {
       const report = storeMessages(this.db, sourceId, result.messages);
       if (result.cursor) setCursor(this.db, sourceId, result.cursor);
       
-      this.onProgress(0, "completed", `Ingested ${result.messages.length} messages (${report.stored} stored, ${report.redacted} redacted)`);
+      this.onProgress(0, "completed", `Ingested ${result.messages.length} messages (${report.inserted} inserted, ${report.skippedDuplicates} duplicates skipped)`);
 
       // Step 2: Scan Platform Trends
       this.currentStepIndex = 1;
@@ -186,7 +186,7 @@ export class AutomationRunner {
       this.checkKillSwitch();
 
       const scanRes = await scanTrends(this.db, (opts) => generateWithWebSearch(this.db, opts), platform);
-      this.onProgress(1, "completed", `Found ${scanRes.extracted} trends (${scanRes.saved} saved)`);
+      this.onProgress(1, "completed", `Found ${scanRes.inserted} new trend cards (${scanRes.skippedDuplicate} duplicates skipped)`);
 
       // Step 3: Extract Evidence
       this.currentStepIndex = 2;
