@@ -117,7 +117,8 @@ const TOOL_DEFINITIONS = [
   { name: "scan", description: "Web-search trend scan for a platform (defaults to the ratified one), stores trend cards.", inputSchema: { type: "object", properties: { platform: { type: "string" } } } },
   { name: "ingest_beeper", description: "Pull new messages from the local Beeper API into the corpus.", inputSchema: { type: "object", properties: {} } },
   { name: "engine", description: "Run the ideation -> draft -> gate pipeline autonomously for a platform (defaults to ratified). Produces drafts/holds, never publishes.", inputSchema: { type: "object", properties: { platform: { type: "string" } } } },
-  { name: "ideate_propose_angle", description: "Propose ONE content angle. If it needs a real specific to be credible, returns a clarifying question for you to relay to Adam and answer via ideate_answer_question. If not, drafts immediately and returns the outcome.", inputSchema: { type: "object", properties: { platform: { type: "string" } } } },
+  { name: "ideate_suggest_angles", description: "Brainstorm-only: propose several content angles/briefs (drawing on trend cards, approved evidence, and past publications for syndication/adaptation candidates) WITHOUT drafting or committing anything. Use this for a morning digest / open-ended 'what should we talk about' conversation. Nothing here touches the gate chain or evidence bank — pure suggestions to discuss with Adam.", inputSchema: { type: "object", properties: { platform: { type: "string" }, count: { type: "number" } } } },
+  { name: "ideate_propose_angle", description: "Propose ONE content angle and commit to drafting it. If it needs a real specific to be credible, returns a clarifying question for you to relay to Adam and answer via ideate_answer_question. If not, drafts immediately and returns the outcome. Use ideate_suggest_angles first if you just want options to discuss, not a draft yet.", inputSchema: { type: "object", properties: { platform: { type: "string" } } } },
   { name: "ideate_answer_question", description: "Answer a pending clarifying question from ideate_propose_angle (Adam's real answer becomes approved evidence), then drafts through the normal gate chain.", inputSchema: { type: "object", properties: { angle_id: { type: "string" }, answer: { type: "string" } }, required: ["angle_id", "answer"] } },
   { name: "pause", description: "Set the kill switch — publisher will refuse all sends until a human resumes it via CLI.", inputSchema: { type: "object", properties: { reason: { type: "string" } } } },
 ] as const;
@@ -197,6 +198,14 @@ async function engineImpl(platformArg?: string): Promise<ToolResult> {
   if (!platform) return errorResult("no ratified platform — call score_ratify first, or pass one");
   const report = await runEngine(db, { generate: gen }, platform);
   return text(report);
+}
+
+async function ideateSuggestAnglesImpl(platformArg?: string, count?: number): Promise<ToolResult> {
+  const platform = platformArg ?? ratifiedPlatform(db);
+  if (!platform) return errorResult("no ratified platform — call score_ratify first, or pass one");
+  const ideas = await ideate(db, gen, platform, count && count > 0 ? count : 3);
+  if (ideas.length === 0) return text("no angles generated — check trend cards / evidence coverage (try scan / evidence_extract first)");
+  return text(ideas.map((i) => ({ angle: i.angle, brief: i.brief, interestTag: i.interestTag })));
 }
 
 async function ideateProposeAngleImpl(platformArg?: string): Promise<ToolResult> {
@@ -298,6 +307,8 @@ async function dispatchTool(name: string, args: Record<string, unknown>): Promis
       return ingestBeeperImpl();
     case "engine":
       return engineImpl(str(args.platform));
+    case "ideate_suggest_angles":
+      return ideateSuggestAnglesImpl(str(args.platform), num(args.count));
     case "ideate_propose_angle":
       return ideateProposeAngleImpl(str(args.platform));
     case "ideate_answer_question": {
