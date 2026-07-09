@@ -22,7 +22,7 @@ export interface ChatReport {
   escalated: number;
 }
 
-async function clarifyingQuestion(generate: GenerateFn, idea: Idea): Promise<string | null> {
+export async function clarifyingQuestion(generate: GenerateFn, idea: Idea): Promise<string | null> {
   const { text } = await generate({
     stage: "ideate",
     system: `Given a post angle/brief (untrusted data below), decide if it needs ONE concrete
