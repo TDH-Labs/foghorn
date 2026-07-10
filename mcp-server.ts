@@ -121,6 +121,7 @@ const TOOL_DEFINITIONS = [
   { name: "ideate_suggest_angles", description: "Brainstorm-only: propose several content angles/briefs (drawing on trend cards, approved evidence, and past publications for syndication/adaptation candidates) WITHOUT drafting or committing anything. Returns the target platform alongside each angle — always state it when relaying suggestions to Adam. Use this for a morning digest / open-ended 'what should we talk about' conversation. Nothing here touches the gate chain or evidence bank — pure suggestions to discuss with Adam.", inputSchema: { type: "object", properties: { platform: { type: "string" }, count: { type: "number" } } } },
   { name: "ideate_propose_angle", description: "Propose ONE content angle and commit to drafting it. If it needs a real specific to be credible, returns a clarifying question for you to relay to Adam and answer via ideate_answer_question. If not, drafts immediately and returns the outcome. Use ideate_suggest_angles first if you just want options to discuss, not a draft yet.", inputSchema: { type: "object", properties: { platform: { type: "string" } } } },
   { name: "ideate_answer_question", description: "Answer a pending clarifying question from ideate_propose_angle (Adam's real answer becomes approved evidence), then drafts through the normal gate chain.", inputSchema: { type: "object", properties: { angle_id: { type: "string" }, answer: { type: "string" } }, required: ["angle_id", "answer"] } },
+  { name: "ideate_pending_questions", description: "List clarifying questions still awaiting Adam's answer (from ideate_propose_angle). Call this before ideate_answer_question when Adam replies to a question — never guess which angle_id his reply is for from memory, always re-check here first. Empty list = nothing pending.", inputSchema: { type: "object", properties: {} } },
   { name: "pause", description: "Set the kill switch — publisher will refuse all sends until a human resumes it via CLI.", inputSchema: { type: "object", properties: { reason: { type: "string" } } } },
 ] as const;
 
@@ -207,6 +208,24 @@ async function ideateSuggestAnglesImpl(platformArg?: string, count?: number): Pr
   const ideas = await ideate(db, gen, platform, count && count > 0 ? count : 3);
   if (ideas.length === 0) return text("no angles generated — check trend cards / evidence coverage (try scan / evidence_extract first)");
   return text({ platform, angles: ideas.map((i) => ({ angle: i.angle, brief: i.brief, interestTag: i.interestTag })) });
+}
+
+function ideatePendingQuestionsImpl(): ToolResult {
+  const rows = db
+    .query<{ id: number; platform: string; question: string; idea_json: string; created_at: string }, []>(
+      "SELECT id, platform, question, idea_json, created_at FROM pending_angles WHERE resolved_at IS NULL ORDER BY created_at ASC",
+    )
+    .all();
+  if (rows.length === 0) return text("no pending questions");
+  return text(
+    rows.map((r) => ({
+      angleId: String(r.id),
+      platform: r.platform,
+      angle: (JSON.parse(r.idea_json) as Idea).angle,
+      question: r.question,
+      askedAt: r.created_at,
+    })),
+  );
 }
 
 async function ideateProposeAngleImpl(platformArg?: string): Promise<ToolResult> {
@@ -335,6 +354,8 @@ async function dispatchTool(name: string, args: Record<string, unknown>): Promis
       if (!angleId || answer === undefined) return errorResult("ideate_answer_question: angle_id and answer are required");
       return ideateAnswerQuestionImpl(angleId, answer);
     }
+    case "ideate_pending_questions":
+      return ideatePendingQuestionsImpl();
     case "pause": {
       pause(db, str(args.reason) || "agent", "mcp-agent");
       return text("paused — publisher will refuse all sends until a human resumes it via CLI");
