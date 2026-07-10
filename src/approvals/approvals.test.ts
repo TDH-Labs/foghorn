@@ -8,6 +8,7 @@ import { effectiveLevel, ratifyPromotion, recordCleanApproval, recordIncident } 
 process.env.FOGHORN_SENTINEL_SECRET = "test-secret-0123456789abcdef";
 process.env.FOGHORN_TELEGRAM_BOT_TOKEN = "123:testtoken";
 process.env.FOGHORN_TELEGRAM_CHAT_ID = "7078451053";
+process.env.FOGHORN_HERMES_BOT_TOKEN = "456:hermestesttoken";
 // isolate the kill-switch flag: the telegram 'pause' test must not touch data/PAUSED
 process.env.FOGHORN_PAUSED_FLAG = `${process.env.TMPDIR ?? "/tmp"}/foghorn-test-paused-${process.pid}`;
 
@@ -149,16 +150,17 @@ describe("telegram approval loop", () => {
     return { fetchImpl, calls };
   }
 
-  test("sendPendingApprovals posts the draft with nonce'd buttons and stores message_id", async () => {
+  test("sendPendingApprovals posts a plain-text prompt to the Foghorn topic and stores message_id (conversational — no buttons, 2026-07-09)", async () => {
     const db = freshDb();
     const { approvalId } = insertAwaitingDraft(db);
-    const nonce = db.query<{ nonce: string }, [number]>("SELECT nonce FROM approvals WHERE id=?").get(approvalId)!.nonce;
     const { fetchImpl, calls } = fakeTelegram([]);
     const sent = await sendPendingApprovals(db, fetchImpl);
     expect(sent).toBe(1);
     const send = calls.find((c) => c.method === "sendMessage")!;
     expect(String(send.body.text)).toContain("verifier design");
-    expect(JSON.stringify(send.body.reply_markup)).toContain(`a:${approvalId}:ap:${nonce}`);
+    expect(String(send.body.text)).toContain(`approve ${approvalId}`);
+    expect(send.body.reply_markup).toBeUndefined();
+    expect(send.body.message_thread_id).toBe("255");
     expect(db.query<{ telegram_message_id: string }, [number]>("SELECT telegram_message_id FROM approvals WHERE id=?").get(approvalId)?.telegram_message_id).toBe("555");
     // second run sends nothing (already messaged)
     expect(await sendPendingApprovals(db, fetchImpl)).toBe(0);

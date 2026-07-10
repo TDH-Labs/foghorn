@@ -349,6 +349,81 @@ export async function main(argv: string[]): Promise<number> {
         db.close();
       }
     }
+    case "pending": {
+      const db = openAndMigrate();
+      const rows = db
+        .query<{ id: number }, []>("SELECT id FROM approvals WHERE decided_at IS NULL ORDER BY id ASC")
+        .all();
+      const { renderApproval } = await import("./approvals/queue.ts");
+      if (!rows.length) {
+        console.log("no pending approvals");
+      } else {
+        for (const r of rows) {
+          console.log(`--- approval ${r.id} ---`);
+          console.log(renderApproval(db, r.id));
+          console.log("");
+        }
+      }
+      db.close();
+      return 0;
+    }
+    case "approve":
+    case "reject": {
+      const id = Number(rest[0]);
+      if (!Number.isFinite(id)) {
+        console.error(`usage: foghorn ${verb} <approval-id>`);
+        return 1;
+      }
+      const db = openAndMigrate();
+      const { recordDecision } = await import("./approvals/queue.ts");
+      const result = recordDecision(db, id, verb === "approve" ? "approved" : "rejected", "telegram-conversational");
+      console.log(result.ok ? `${verb === "approve" ? "approved" : "rejected"} — ${result.detail}` : `refused: ${result.detail}`);
+      db.close();
+      return result.ok ? 0 : 1;
+    }
+    case "promote": {
+      const spec = rest[0] ?? "";
+      const m = /^(\S+)\/(\S+)$/.exec(spec);
+      if (!m) {
+        console.error("usage: foghorn promote <platform>/<content-class>");
+        return 1;
+      }
+      const [, platform, contentClass] = m;
+      const db = openAndMigrate();
+      const current = db
+        .query<{ level: number }, [string, string]>(
+          "SELECT level FROM autonomy_state WHERE platform = ? AND content_class = ?",
+        )
+        .get(platform!, contentClass!);
+      if (!current) {
+        console.error(`no autonomy state for ${platform}/${contentClass} yet`);
+        db.close();
+        return 1;
+      }
+      const { ratifyPromotion } = await import("./autonomy/ladder.ts");
+      try {
+        ratifyPromotion(db, platform!, contentClass!, current.level + 1);
+        console.log(`promoted ${platform}/${contentClass} to L${current.level + 1}`);
+        db.close();
+        return 0;
+      } catch (err) {
+        console.error(`promotion failed: ${err instanceof Error ? err.message : String(err)}`);
+        db.close();
+        return 1;
+      }
+    }
+    case "approvals-check": {
+      const db = openAndMigrate();
+      const { expireStaleApprovals } = await import("./approvals/queue.ts");
+      const { sendPendingApprovals } = await import("./approvals/telegram.ts");
+      const expired = expireStaleApprovals(db);
+      const sent = await sendPendingApprovals(db);
+      if (expired || sent) {
+        console.log(`expired=${expired} sent=${sent}`);
+      }
+      db.close();
+      return 0;
+    }
     case "approvals-daemon": {
       const db = openAndMigrate();
       const { expireStaleApprovals } = await import("./approvals/queue.ts");

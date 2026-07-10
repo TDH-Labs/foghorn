@@ -37,6 +37,32 @@ async function tg<T>(fetchImpl: typeof fetch, method: string, body: Record<strin
   return json;
 }
 
+// Group-chat delivery (2026-07-09): posts via Hermes's own bot into the
+// Foghorn topic instead of the dedicated FOGHORN_TELEGRAM_BOT_TOKEN bot -
+// same identity Adam already talks to the foghorn-agent persona through, one
+// bot instead of two. No inline buttons: nothing polls this bot's updates
+// for a callback_query anymore (only Hermes's own gateway may long-poll its
+// bot), so approve/reject/pause/resume/promote are resolved conversationally
+// - Adam replies in the topic, the resident persona resolves it via
+// `bun foghorn.ts approve|reject|pending|pause|resume|promote` (see
+// conversational-approval.md's Foghorn section). The dedicated bot's own
+// token/getUpdates polling (below) is dead code once the launchd daemon is
+// stopped - kept only so `foghorn.ts approvals-daemon` still compiles if
+// anyone runs it manually.
+function hermesBotToken(): string {
+  const t = process.env.FOGHORN_HERMES_BOT_TOKEN;
+  if (!t) throw new Error("FOGHORN_HERMES_BOT_TOKEN not set");
+  return t;
+}
+
+function hermesGroupChatId(): string {
+  return process.env.FOGHORN_HERMES_GROUP_CHAT_ID ?? "-1004293863759";
+}
+
+function foghornTopicThreadId(): string {
+  return process.env.FOGHORN_TOPIC_THREAD_ID ?? "255";
+}
+
 /** Send Telegram messages for approvals that don't have one yet. */
 export async function sendPendingApprovals(db: Database, fetchImpl: typeof fetch = fetch): Promise<number> {
   const pending = db
@@ -45,21 +71,17 @@ export async function sendPendingApprovals(db: Database, fetchImpl: typeof fetch
     )
     .all();
   for (const p of pending) {
-    const text = renderApproval(db, p.id);
-    const result = await tg<{ message_id: number }>(fetchImpl, "sendMessage", {
-      chat_id: approverChatId(),
-      text,
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: "✅ Approve", callback_data: `a:${p.id}:ap:${p.nonce}` },
-            { text: "❌ Reject", callback_data: `a:${p.id}:rj:${p.nonce}` },
-          ],
-          [{ text: "⏸ Pause all publishing", callback_data: `a:${p.id}:pz:${p.nonce}` }],
-        ],
-      },
+    const text =
+      `${renderApproval(db, p.id)}\n\n` +
+      `Reply here to approve or reject (e.g. "approve ${p.id}" / "reject ${p.id}") - no button, just say it plainly.`;
+    const res = await fetchImpl(`https://api.telegram.org/bot${hermesBotToken()}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: hermesGroupChatId(), message_thread_id: foghornTopicThreadId(), text }),
     });
-    db.run("UPDATE approvals SET telegram_message_id = ? WHERE id = ?", [String(result.result.message_id), p.id]);
+    const json = (await res.json()) as TgResponse<{ message_id: number }>;
+    if (!json.ok) throw new Error(`telegram sendMessage: ${json.description ?? res.status}`);
+    db.run("UPDATE approvals SET telegram_message_id = ? WHERE id = ?", [String(json.result.message_id), p.id]);
   }
   return pending.length;
 }
