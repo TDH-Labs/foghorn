@@ -107,4 +107,59 @@ describe("BeeperSource", () => {
     const source = new BeeperSource({ token: "t", fetchImpl: failing });
     await expect(source.pull(null)).rejects.toThrow(/beeper api 500/);
   });
+
+  test("excludes chats whose title matches an operational-agent suffix by default", async () => {
+    const calls: string[] = [];
+    const fetchImpl = (async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      calls.push(url.pathname);
+      if (url.pathname === "/v1/chats/search") {
+        return Response.json({
+          items: [
+            { id: "chat-real", title: "AI Builders", type: "group", network: "WhatsApp", accountID: "wa-1", lastActivity: "2026-07-06T10:00:00Z" },
+            { id: "chat-ops", title: "Marketing - AdamHodl and Hermes Mac Studio", type: "group", network: "Telegram", accountID: "tg-1", lastActivity: "2026-07-09T10:00:00Z" },
+          ],
+          hasMore: false,
+        });
+      }
+      if (url.pathname === "/v1/chats/chat-real/messages") {
+        return Response.json({
+          items: [{ id: "m1", chatID: "chat-real", accountID: "wa-1", senderID: "u1", senderName: "Priya", timestamp: "2026-07-06T09:00:00Z", text: "real content", isSender: false }],
+          hasMore: false, newestCursor: "cur-1", oldestCursor: "cur-1",
+        });
+      }
+      // The excluded chat's messages endpoint should never be called at all.
+      if (url.pathname === "/v1/chats/chat-ops/messages") {
+        return Response.json({ items: [{ id: "m9", chatID: "chat-ops", accountID: "tg-1", senderID: "u2", senderName: "Adam", timestamp: "2026-07-09T09:00:00Z", text: "Approved.", isSender: true }], hasMore: false, newestCursor: "cur-9", oldestCursor: "cur-9" });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    const source = new BeeperSource({ token: "t", fetchImpl, initialPages: 3 });
+    const result = await source.pull(null);
+
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0]?.chatId).toBe("chat-real");
+    expect(calls.some((p) => p.startsWith("/v1/chats/chat-ops/"))).toBe(false);
+  });
+
+  test("excludeTitleSuffixes: [] disables the default filter", async () => {
+    const fetchImpl = (async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/v1/chats/search") {
+        return Response.json({
+          items: [{ id: "chat-ops", title: "Marketing - AdamHodl and Hermes Mac Studio", type: "group", network: "Telegram", accountID: "tg-1", lastActivity: "2026-07-09T10:00:00Z" }],
+          hasMore: false,
+        });
+      }
+      if (url.pathname === "/v1/chats/chat-ops/messages") {
+        return Response.json({ items: [{ id: "m9", chatID: "chat-ops", accountID: "tg-1", senderID: "u2", senderName: "Adam", timestamp: "2026-07-09T09:00:00Z", text: "Approved.", isSender: true }], hasMore: false, newestCursor: "cur-9", oldestCursor: "cur-9" });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    const source = new BeeperSource({ token: "t", fetchImpl, initialPages: 3, excludeTitleSuffixes: [] });
+    const result = await source.pull(null);
+    expect(result.messages).toHaveLength(1);
+  });
 });

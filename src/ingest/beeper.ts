@@ -49,7 +49,19 @@ export interface BeeperSourceOpts {
   initialPages?: number;
   /** max messages per pull() call, safety valve */
   maxMessages?: number;
+  /**
+   * Chats whose title ends with any of these suffixes are skipped entirely —
+   * never fetched, never cursor-tracked. Default excludes Hermes's own
+   * Telegram topic-mirror chats (e.g. "Marketing - AdamHodl and Hermes Mac
+   * Studio") — operational agent chatter, not personal/professional content,
+   * confirmed polluting the ideate() syndication-candidate window (most
+   * recent 25 corpus docs) with things like "Approved." and topic-admin
+   * commands. Pass [] to disable.
+   */
+  excludeTitleSuffixes?: string[];
 }
+
+const DEFAULT_EXCLUDE_TITLE_SUFFIXES = [" - AdamHodl and Hermes Mac Studio"];
 
 interface CursorState {
   chats: Record<string, string>;
@@ -74,6 +86,7 @@ export class BeeperSource implements MessageSource {
   private readonly chatType: "group" | "any" | "single";
   private readonly initialPages: number;
   private readonly maxMessages: number;
+  private readonly excludeTitleSuffixes: string[];
 
   constructor(opts: BeeperSourceOpts = {}) {
     const token = opts.token ?? process.env.BEEPER_ACCESS_TOKEN;
@@ -84,6 +97,12 @@ export class BeeperSource implements MessageSource {
     this.chatType = opts.chatType ?? "group";
     this.initialPages = opts.initialPages ?? 5;
     this.maxMessages = opts.maxMessages ?? 5000;
+    this.excludeTitleSuffixes = opts.excludeTitleSuffixes ?? DEFAULT_EXCLUDE_TITLE_SUFFIXES;
+  }
+
+  private isExcludedChat(chat: BeeperChat): boolean {
+    const title = chat.title ?? "";
+    return this.excludeTitleSuffixes.some((suffix) => title.endsWith(suffix));
   }
 
   private async get<T>(path: string, params: Record<string, string | undefined>): Promise<T> {
@@ -137,6 +156,7 @@ export class BeeperSource implements MessageSource {
 
     for (const chat of chats) {
       if (out.length >= this.maxMessages) break;
+      if (this.isExcludedChat(chat)) continue;
       const known = state.chats[chat.id];
 
       if (known) {
