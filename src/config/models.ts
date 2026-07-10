@@ -61,8 +61,8 @@ const ANTHROPIC_TIER_MODEL: Record<Tier, string> = {
 // `:free` variant was pulled -- do not rely on it). z-ai/glm-5.2 ($0.56/$1.76)
 // is a same-tier alternate, selectable via FOGHORN_MODEL_<STAGE> if preferred.
 const OPENROUTER_TIER_MODEL: Record<Tier, string> = {
-  reason: "deepseek/deepseek-chat",
-  light: "deepseek/deepseek-chat",
+  reason: "deepseek/deepseek-v4-pro",
+  light: "deepseek/deepseek-v4-flash",
 };
 
 export function modelForStage(stage: Stage): string {

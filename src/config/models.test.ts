@@ -40,15 +40,15 @@ describe("modelForStage", () => {
     expect(modelForStage("judge_voice")).toBe("claude-haiku-4-5");
 
     process.env.FOGHORN_LLM_PROVIDER = "openrouter";
-    expect(modelForStage("draft")).toBe("deepseek/deepseek-chat");
-    expect(modelForStage("judge_voice")).toBe("deepseek/deepseek-chat");
+    expect(modelForStage("draft")).toBe("deepseek/deepseek-v4-pro");
+    expect(modelForStage("judge_voice")).toBe("deepseek/deepseek-v4-flash");
   });
 
   test("per-stage override wins over provider tier default", () => {
     process.env.FOGHORN_LLM_PROVIDER = "openrouter";
     process.env.FOGHORN_MODEL_DRAFT = "z-ai/glm-5.2";
     expect(modelForStage("draft")).toBe("z-ai/glm-5.2");
-    expect(modelForStage("judge_voice")).toBe("deepseek/deepseek-chat"); // unaffected
+    expect(modelForStage("judge_voice")).toBe("deepseek/deepseek-v4-flash"); // unaffected
   });
 
   test("global override wins over provider tier default but not per-stage", () => {
