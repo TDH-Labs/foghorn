@@ -91,10 +91,11 @@ for (const sig of ["SIGINT", "SIGTERM"] as const) {
 }
 
 // ── ideate flow: propose/answer split (MCP is request/response; ideateChat's
-// original readline loop is replaced with server-held pending-angle state) ──
-
-let nextAngleId = 1;
-const pendingAngles = new Map<string, { idea: Idea; platform: string }>();
+// original readline loop is replaced with pending-angle state persisted in
+// the `pending_angles` table -- Hermes cron jobs run in a fresh subprocess
+// per invocation, so in-memory state would not survive from "this morning's
+// digest asked a question" to "Adam answers hours later in a separate
+// conversation." ──
 
 // ── Tool catalog ─────────────────────────────────────────────────────────
 
@@ -222,22 +223,39 @@ async function ideateProposeAngleImpl(platformArg?: string): Promise<ToolResult>
     return text({ angle: idea.angle, brief: idea.brief, question: null, outcome });
   }
 
-  const angleId = String(nextAngleId++);
-  pendingAngles.set(angleId, { idea, platform });
+  db.run(
+    "INSERT INTO pending_angles (platform, idea_json, question, created_at) VALUES (?, ?, ?, ?)",
+    [platform, JSON.stringify(idea), question, new Date().toISOString()],
+  );
+  const angleId = String(db.query<{ id: number }, []>("SELECT last_insert_rowid() id").get()!.id);
   return text({ angleId, angle: idea.angle, brief: idea.brief, question });
 }
 
 async function ideateAnswerQuestionImpl(angleId: string, answer: string): Promise<ToolResult> {
-  const pending = pendingAngles.get(angleId);
-  if (!pending) return errorResult(`no pending angle '${angleId}' — it may have already been answered, or the server restarted`);
-  pendingAngles.delete(angleId);
-  const { idea, platform } = pending;
+  const numericId = Number(angleId);
+  const row = Number.isFinite(numericId)
+    ? db
+        .query<{ id: number; platform: string; idea_json: string }, [number]>(
+          "SELECT id, platform, idea_json FROM pending_angles WHERE id = ? AND resolved_at IS NULL",
+        )
+        .get(numericId)
+    : null;
+  if (!row) {
+    return errorResult(
+      `no pending angle '${angleId}' — it may have already been answered, or that id doesn't exist. Call ideate_propose_angle again for a fresh one.`,
+    );
+  }
+  // Mark resolved before drafting (not after) so a retry/duplicate answer
+  // can't double-spend the same pending angle — same first-write-wins shape
+  // as recordDecision() in approvals/queue.ts.
+  db.run("UPDATE pending_angles SET resolved_at = ? WHERE id = ?", [new Date().toISOString(), row.id]);
+  const idea = JSON.parse(row.idea_json) as Idea;
 
   if (answer.trim()) {
     const id = proposeEvidence(db, idea.interestTag ?? "general", answer.trim(), `live answer during Hermes ideate flow`, null);
     approveEvidence(db, id);
   }
-  const outcome = await processIdea(db, { generate: gen }, idea, platform);
+  const outcome = await processIdea(db, { generate: gen }, idea, row.platform);
   return text({ angle: idea.angle, answered: !!answer.trim(), outcome });
 }
 
