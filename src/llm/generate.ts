@@ -13,6 +13,15 @@ import type { Database } from "bun:sqlite";
 import { activeProvider, modelForStage, type Stage } from "../config/models.ts";
 import { preflight, record, unitCost } from "../spend/ledger.ts";
 import { generateViaOpenRouter } from "./openrouter.ts";
+import { generateViaClaudeCli } from "./claude-cli.ts";
+
+// Stages that route through Claude CLI (subscription-billed Sonnet 5)
+// instead of the metered API, regardless of activeProvider(). Scoped
+// narrowly to insight/recommendation generation -- gates, judges, fix-loop,
+// and the actual gate-passing draft stay on the cheap tier. Opt out with
+// FOGHORN_DISABLE_CLAUDE_CLI=1 (falls back to the normal API path, e.g. if
+// the CLI or subscription auth is unavailable).
+const CLAUDE_CLI_STAGES = new Set<Stage>(["ideate"]);
 
 const MIN_OUTPUT_TOKENS = 1000;
 const DEFAULT_TIMEOUT_MS = 240_000;
@@ -47,6 +56,18 @@ function getClient(timeoutMs: number): Anthropic {
 }
 
 export async function generateTextResilient(db: Database, opts: GenerateOpts): Promise<GenerateResult> {
+  if (CLAUDE_CLI_STAGES.has(opts.stage) && process.env.FOGHORN_DISABLE_CLAUDE_CLI !== "1") {
+    try {
+      return await generateViaClaudeCli(db, opts);
+    } catch (err) {
+      // Falls back to the metered API path rather than breaking the whole
+      // stage — e.g. `claude auth login` hasn't been run yet, or the CLI
+      // binary is unavailable. Logged so the gap is visible, not silent.
+      console.error(
+        `[generate] claude-cli failed for stage=${opts.stage}, falling back to API: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
   if (activeProvider() === "openrouter") return generateViaOpenRouter(db, opts);
   return generateViaAnthropic(db, opts);
 }
