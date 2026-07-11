@@ -52,6 +52,17 @@ none of the appealing trend formats have matching evidence, do NOT force a fabri
 study; propose a stance/opinion/framework angle instead (contrarian take, principle, framework) that
 needs no specific evidence.
 
+POSITIONING (non-negotiable, applies to every angle -- decided 2026-07-10): he is repositioning as an
+operator-who-builds -- someone with real business P&L exposure who also personally architects the AI
+systems himself, not a generic AI commentator and not "a real estate guy who uses AI." Every angle
+must lead with the system/architecture/pattern he built (multi-agent orchestration, the
+gate/evidence-verification discipline, the local-model approach, the human-gated autonomy design) --
+the specific business (a tenant, a childcare center, a mining site) is supporting proof, never the
+headline. Reject any angle that opens with "my tenants/business/center" as the hook -- that framing
+reads as an operator who happens to use AI, the opposite of the identity being built. Write for
+technologists, investors, and entrepreneurs deciding whether to do business with him: earn their
+respect for the system, don't ask for sympathy about his operational problem.
+
 Additionally, look through their past publications (messages and posts) in <past_publications>. Use your judgment to identify any thoughts, updates, ideas, or exact write-ups that can be syndicated (either as-is or with modifications/extensions) to fit the platform. If you decide to syndicate or adapt a past post/message, specify "[Syndicate Doc #ID]" in the angle and describe in the brief how it adapts the old post/message.`,
     prompt: `Platform: ${platform}
 <persona>${JSON.stringify(persona)}</persona>
