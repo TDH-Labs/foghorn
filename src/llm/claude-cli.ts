@@ -61,8 +61,15 @@ export async function generateViaClaudeCli(
     opts.prompt,
     "--output-format",
     "json",
+    // 1 turn wasn't enough headroom: on complex prompts Sonnet sometimes
+    // attempts a tool call first (blocked by --allowedTools ""), consuming
+    // a turn before it can recover with a text answer -- observed live as
+    // error_max_turns/stop_reason=tool_use, a wasted paid turn every time.
+    // 3 gives room for attempt -> blocked -> recover without opening the
+    // door to a real agentic loop (still --allowedTools "", so there is
+    // nothing for it to actually call).
     "--max-turns",
-    "1",
+    "3",
     "--allowedTools",
     "",
     "--model",

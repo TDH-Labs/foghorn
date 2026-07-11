@@ -40,7 +40,7 @@ describe("generateViaClaudeCli", () => {
     expect(args).toContain("--append-system-prompt");
     expect(args).toContain("be terse");
     expect(args).toContain("--max-turns");
-    expect(args[args.indexOf("--max-turns") + 1]).toBe("1");
+    expect(args[args.indexOf("--max-turns") + 1]).toBe("3");
     expect(args).toContain("--allowedTools");
     expect(args[args.indexOf("--allowedTools") + 1]).toBe(""); // no tool access — pure text completion
     expect(args).toContain("--model");
