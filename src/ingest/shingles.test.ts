@@ -43,7 +43,7 @@ describe("shingles", () => {
 
 describe("pii flags", () => {
   test("detects email, phone, card, ssn", () => {
-    expect(piiFlags("mail me at adam@example.com")).toContain("email");
+    expect(piiFlags("mail me at user@example.com")).toContain("email");
     expect(piiFlags("call (913) 555-0142 tonight")).toContain("phone");
     expect(piiFlags("card 4111 1111 1111 1111 exp 09/28")).toContain("card");
     expect(piiFlags("ssn 123-45-6789")).toContain("ssn");

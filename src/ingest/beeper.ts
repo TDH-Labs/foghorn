@@ -52,7 +52,7 @@ export interface BeeperSourceOpts {
   /**
    * Chats whose title ends with any of these suffixes are skipped entirely —
    * never fetched, never cursor-tracked. Default excludes Hermes's own
-   * Telegram topic-mirror chats (e.g. "Marketing - AdamHodl and Hermes Mac
+   * Telegram topic-mirror chats (e.g. "Marketing - OperatorUser and Hermes Mac
    * Studio") — operational agent chatter, not personal/professional content,
    * confirmed polluting the ideate() syndication-candidate window (most
    * recent 25 corpus docs) with things like "Approved." and topic-admin
@@ -61,7 +61,7 @@ export interface BeeperSourceOpts {
   excludeTitleSuffixes?: string[];
 }
 
-const DEFAULT_EXCLUDE_TITLE_SUFFIXES = [" - AdamHodl and Hermes Mac Studio"];
+const DEFAULT_EXCLUDE_TITLE_SUFFIXES = [" - OperatorUser and Hermes Mac Studio"];
 
 interface CursorState {
   chats: Record<string, string>;

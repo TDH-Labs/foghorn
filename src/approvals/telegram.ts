@@ -23,7 +23,9 @@ function botToken(): string {
 }
 
 function approverChatId(): string {
-  return process.env.FOGHORN_TELEGRAM_CHAT_ID ?? "7078451053";
+  const id = process.env.FOGHORN_TELEGRAM_CHAT_ID;
+  if (!id) throw new Error("Missing FOGHORN_TELEGRAM_CHAT_ID in environment. Check .env.local.");
+  return id;
 }
 
 async function tg<T>(fetchImpl: typeof fetch, method: string, body: Record<string, unknown>): Promise<TgResponse<T>> {
@@ -39,11 +41,11 @@ async function tg<T>(fetchImpl: typeof fetch, method: string, body: Record<strin
 
 // Group-chat delivery (2026-07-09): posts via Hermes's own bot into the
 // Foghorn topic instead of the dedicated FOGHORN_TELEGRAM_BOT_TOKEN bot -
-// same identity Adam already talks to the foghorn-agent persona through, one
+// same identity the operator already talks to the foghorn-agent persona through, one
 // bot instead of two. No inline buttons: nothing polls this bot's updates
 // for a callback_query anymore (only Hermes's own gateway may long-poll its
 // bot), so approve/reject/pause/resume/promote are resolved conversationally
-// - Adam replies in the topic, the resident persona resolves it via
+// - Operator replies in the topic, the resident persona resolves it via
 // `bun foghorn.ts approve|reject|pending|pause|resume|promote` (see
 // conversational-approval.md's Foghorn section). The dedicated bot's own
 // token/getUpdates polling (below) is dead code once the launchd daemon is

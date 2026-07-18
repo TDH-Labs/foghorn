@@ -429,7 +429,7 @@ export async function main(argv: string[]): Promise<number> {
       const { expireStaleApprovals } = await import("./approvals/queue.ts");
       const { pollOnce, sendPendingApprovals } = await import("./approvals/telegram.ts");
       const once = rest.includes("--once");
-      console.log(`approvals daemon up (chat ${process.env.FOGHORN_TELEGRAM_CHAT_ID ?? "7078451053"})`);
+      console.log(`approvals daemon up (chat ${process.env.FOGHORN_TELEGRAM_CHAT_ID ?? "UNKNOWN"})`);
       for (;;) {
         try {
           const expired = expireStaleApprovals(db);

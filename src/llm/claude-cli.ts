@@ -1,6 +1,6 @@
 // Claude CLI provider: shells out to `claude -p` (Claude Code print mode)
 // instead of calling the Anthropic/OpenRouter API directly. Billed against
-// Adam's Claude subscription (OAuth), not metered per-token API spend --
+// Operator's Claude subscription (OAuth), not metered per-token API spend --
 // the whole point is running the insight-generation stage on Sonnet 5
 // without paying API rates for it daily. See config/models.ts's
 // CLAUDE_CLI_STAGES for which stages actually route here.

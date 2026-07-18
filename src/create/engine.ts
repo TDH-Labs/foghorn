@@ -36,7 +36,7 @@ do not repeat a fix that already failed. Output ONLY the revised post text.`,
 ${blocking.map((f) => `- [${f.tool}/${f.ruleId}] ${f.message}${f.span ? ` (span: "${f.span}")` : ""}`).join("\n")}
 </findings>
 ${journal.length > 0 ? `<prior_attempts>\n${journal.join("\n")}\n</prior_attempts>` : ""}`,
-      maxOutputTokens: 1200,
+      maxOutputTokens: 2500,
     });
     return text.trim().replace(/^["'`]+|["'`]+$/g, "");
   };

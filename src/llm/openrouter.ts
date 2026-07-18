@@ -10,7 +10,8 @@ import type { GenerateOpts, GenerateResult } from "./generate.ts";
 
 const MIN_OUTPUT_TOKENS = 500;
 const DEFAULT_TIMEOUT_MS = 240_000;
-const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
+const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
+const BASE_URL = process.env.FOGHORN_OPENROUTER_BASE_URL ?? DEFAULT_BASE_URL;
 
 interface OpenRouterResponse {
   choices?: { message: { content: string | null } }[];
@@ -34,8 +35,9 @@ export async function generateViaOpenRouter(
   db: Database,
   opts: GenerateOpts,
   fetchImpl: typeof fetch = fetch,
+  overrideModel?: string,
 ): Promise<GenerateResult> {
-  const model = modelForStage(opts.stage);
+  const model = overrideModel ?? modelForStage(opts.stage);
   const maxTokens = Math.max(opts.maxOutputTokens ?? 8192, MIN_OUTPUT_TOKENS);
 
   const projectedIn = Math.ceil((opts.prompt.length + (opts.system?.length ?? 0)) / 3);
@@ -48,19 +50,41 @@ export async function generateViaOpenRouter(
   ];
 
   let lastText = "";
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetchImpl(BASE_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey()}`, "content-type": "application/json" },
       body: JSON.stringify({ model, messages, max_tokens: maxTokens }),
       signal: AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
+    // 503 / 502 are transient gateway errors — retry after a short backoff
+    if (res.status === 503 || res.status === 502) {
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+        continue;
+      }
+    }
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      throw new Error(`openrouter ${res.status}: ${detail.slice(0, 300)}`);
+      // "model output error" means the thinking model exhausted its token budget;
+      // the gateway says "please try again" — treat as retryable.
+      if (detail.includes("model output error") && attempt < 2) {
+        console.warn(`[openrouter] model output error on attempt ${attempt + 1}, retrying...`);
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      throw new Error(`openrouter ${res.status}: ${detail.slice(0, 400)}`);
     }
     const body = (await res.json()) as OpenRouterResponse;
-    if (body.error) throw new Error(`openrouter error: ${body.error.message}`);
+    // Error in JSON body (e.g. {"error":{"message":"model output error..."}}) — also retryable
+    if (body.error) {
+      if (body.error.message.includes("model output error") && attempt < 2) {
+        console.warn(`[openrouter] model output error in body on attempt ${attempt + 1}, retrying...`);
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      throw new Error(`openrouter error: ${body.error.message}`);
+    }
 
     const text = body.choices?.[0]?.message?.content ?? "";
     const usage = { in: body.usage?.prompt_tokens ?? 0, out: body.usage?.completion_tokens ?? 0, cacheRead: 0, cacheWrite: 0 };

@@ -1,6 +1,6 @@
 // Platform selection: score candidate platforms on audience alignment,
 // newcomer momentum, and trust fit, grounded in the RATIFIED profiles.
-// Output is a recommendation Adam ratifies — platform choice is a human
+// Output is a recommendation the operator ratifies — platform choice is a human
 // strategy decision; the tool argues with evidence, it does not decide.
 
 import { randomUUID } from "node:crypto";

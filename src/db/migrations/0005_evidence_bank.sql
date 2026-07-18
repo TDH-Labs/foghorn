@@ -1,4 +1,4 @@
--- Evidence bank: real, Adam-approved facts/numbers/anecdotes the drafter can
+-- Evidence bank: real, operator-approved facts/numbers/anecdotes the drafter can
 -- cite instead of inventing specifics. Populated via `foghorn evidence add`.
 CREATE TABLE evidence_bank (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

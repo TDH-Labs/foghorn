@@ -94,7 +94,7 @@ for (const sig of ["SIGINT", "SIGTERM"] as const) {
 // original readline loop is replaced with pending-angle state persisted in
 // the `pending_angles` table -- Hermes cron jobs run in a fresh subprocess
 // per invocation, so in-memory state would not survive from "this morning's
-// digest asked a question" to "Adam answers hours later in a separate
+// digest asked a question" to "the operator answers hours later in a separate
 // conversation." ──
 
 // ── Tool catalog ─────────────────────────────────────────────────────────
@@ -118,10 +118,10 @@ const TOOL_DEFINITIONS = [
   { name: "scan", description: "Web-search trend scan for a platform (defaults to the ratified one), stores trend cards.", inputSchema: { type: "object", properties: { platform: { type: "string" } } } },
   { name: "ingest_beeper", description: "Pull new messages from the local Beeper API into the corpus.", inputSchema: { type: "object", properties: {} } },
   { name: "engine", description: "Run the ideation -> draft -> gate pipeline autonomously for a platform (defaults to ratified). Produces drafts/holds, never publishes.", inputSchema: { type: "object", properties: { platform: { type: "string" } } } },
-  { name: "ideate_suggest_angles", description: "Brainstorm-only: propose several content angles/briefs (drawing on trend cards, approved evidence, and past publications for syndication/adaptation candidates) WITHOUT drafting or committing anything. Returns the target platform alongside each angle — always state it when relaying suggestions to Adam. Use this for a morning digest / open-ended 'what should we talk about' conversation. Nothing here touches the gate chain or evidence bank — pure suggestions to discuss with Adam.", inputSchema: { type: "object", properties: { platform: { type: "string" }, count: { type: "number" } } } },
-  { name: "ideate_propose_angle", description: "Propose ONE content angle and commit to drafting it. If it needs a real specific to be credible, returns a clarifying question for you to relay to Adam and answer via ideate_answer_question. If not, drafts immediately and returns the outcome. Use ideate_suggest_angles first if you just want options to discuss, not a draft yet.", inputSchema: { type: "object", properties: { platform: { type: "string" } } } },
-  { name: "ideate_answer_question", description: "Answer a pending clarifying question from ideate_propose_angle (Adam's real answer becomes approved evidence), then drafts through the normal gate chain.", inputSchema: { type: "object", properties: { angle_id: { type: "string" }, answer: { type: "string" } }, required: ["angle_id", "answer"] } },
-  { name: "ideate_pending_questions", description: "List clarifying questions still awaiting Adam's answer (from ideate_propose_angle). Call this before ideate_answer_question when Adam replies to a question — never guess which angle_id his reply is for from memory, always re-check here first. Empty list = nothing pending.", inputSchema: { type: "object", properties: {} } },
+  { name: "ideate_suggest_angles", description: "Brainstorm-only: propose several content angles/briefs (drawing on trend cards, approved evidence, and past publications for syndication/adaptation candidates) WITHOUT drafting or committing anything. Returns the target platform alongside each angle — always state it when relaying suggestions to the operator. Use this for a morning digest / open-ended 'what should we talk about' conversation. Nothing here touches the gate chain or evidence bank — pure suggestions to discuss with the operator.", inputSchema: { type: "object", properties: { platform: { type: "string" }, count: { type: "number" } } } },
+  { name: "ideate_propose_angle", description: "Propose ONE content angle and commit to drafting it. If it needs a real specific to be credible, returns a clarifying question for you to relay to the operator and answer via ideate_answer_question. If not, drafts immediately and returns the outcome. Use ideate_suggest_angles first if you just want options to discuss, not a draft yet.", inputSchema: { type: "object", properties: { platform: { type: "string" } } } },
+  { name: "ideate_answer_question", description: "Answer a pending clarifying question from ideate_propose_angle (the operator's real answer becomes approved evidence), then drafts through the normal gate chain.", inputSchema: { type: "object", properties: { angle_id: { type: "string" }, answer: { type: "string" } }, required: ["angle_id", "answer"] } },
+  { name: "ideate_pending_questions", description: "List clarifying questions still awaiting the operator's answer (from ideate_propose_angle). Call this before ideate_answer_question when the operator replies to a question — never guess which angle_id their reply is for from memory, always re-check here first. Empty list = nothing pending.", inputSchema: { type: "object", properties: {} } },
   { name: "pause", description: "Set the kill switch — publisher will refuse all sends until a human resumes it via CLI.", inputSchema: { type: "object", properties: { reason: { type: "string" } } } },
 ] as const;
 
@@ -409,10 +409,10 @@ async function handle(request: JsonRpcRequest): Promise<JsonRpcResponse | null> 
             capabilities: { tools: { listChanged: false } },
             serverInfo: { name: "foghorn", title: "Foghorn", version: "0.0.1" },
             instructions:
-              "Foghorn is Adam's gated social-influence pipeline. These tools cover ideation, " +
+              "Foghorn is the operator's gated social-influence pipeline. These tools cover ideation, " +
               "evidence review, status, and drafting — never publishing. There is no tool to " +
               "trigger a real send; publish-tick runs only on a scheduled timer against " +
-              "already-approved, gate-passed content. If Adam wants something published sooner, " +
+              "already-approved, gate-passed content. If the operator wants something published sooner, " +
               "tell him to run `bun foghorn.ts publish-tick` himself.",
           });
     case "notifications/initialized":

@@ -39,7 +39,7 @@ function fakeFetch(state: FakeState): typeof fetch {
         return Response.json({
           items: [
             { id: "m3", chatID: "chat-ai", accountID: "wa-1", senderID: "u2", senderName: "Priya", timestamp: "2026-07-06T09:00:00Z", text: "agents need verifiers", isSender: false },
-            { id: "m2", chatID: "chat-ai", accountID: "wa-1", senderID: "me", senderName: "Adam", timestamp: "2026-07-06T08:00:00Z", text: "gates over vibes, always", isSender: true },
+            { id: "m2", chatID: "chat-ai", accountID: "wa-1", senderID: "me", senderName: "Operator", timestamp: "2026-07-06T08:00:00Z", text: "gates over vibes, always", isSender: true },
             { id: "m1", chatID: "chat-ai", accountID: "wa-1", senderID: "u3", senderName: "Lee", timestamp: "2026-07-06T07:00:00Z", text: "", isSender: false },
           ],
           hasMore: false,
@@ -51,7 +51,7 @@ function fakeFetch(state: FakeState): typeof fetch {
       if (direction === "after" && cursor === "cur-m3" && state.newMessageVisible) {
         return Response.json({
           items: [
-            { id: "m4", chatID: "chat-ai", accountID: "wa-1", senderID: "me", senderName: "Adam", timestamp: "2026-07-06T11:00:00Z", text: "shipping the sentinel today", isSender: true },
+            { id: "m4", chatID: "chat-ai", accountID: "wa-1", senderID: "me", senderName: "Operator", timestamp: "2026-07-06T11:00:00Z", text: "shipping the sentinel today", isSender: true },
           ],
           hasMore: false,
           newestCursor: "cur-m4",
@@ -75,7 +75,7 @@ describe("BeeperSource", () => {
     const self = first.messages.find((m) => m.externalId.endsWith(":m2"));
     const other = first.messages.find((m) => m.externalId.endsWith(":m3"));
     expect(self?.isSelf).toBe(true);
-    expect(self?.senderName).toBe("Adam");
+    expect(self?.senderName).toBe("Operator");
     expect(other?.isSelf).toBe(false);
     expect(other?.chatName).toBe("AI Builders");
     const parsed = JSON.parse(first.cursor!) as { chats: Record<string, string> };
@@ -117,7 +117,7 @@ describe("BeeperSource", () => {
         return Response.json({
           items: [
             { id: "chat-real", title: "AI Builders", type: "group", network: "WhatsApp", accountID: "wa-1", lastActivity: "2026-07-06T10:00:00Z" },
-            { id: "chat-ops", title: "Marketing - AdamHodl and Hermes Mac Studio", type: "group", network: "Telegram", accountID: "tg-1", lastActivity: "2026-07-09T10:00:00Z" },
+            { id: "chat-ops", title: "Marketing - OperatorUser and Hermes Mac Studio", type: "group", network: "Telegram", accountID: "tg-1", lastActivity: "2026-07-09T10:00:00Z" },
           ],
           hasMore: false,
         });
@@ -130,7 +130,7 @@ describe("BeeperSource", () => {
       }
       // The excluded chat's messages endpoint should never be called at all.
       if (url.pathname === "/v1/chats/chat-ops/messages") {
-        return Response.json({ items: [{ id: "m9", chatID: "chat-ops", accountID: "tg-1", senderID: "u2", senderName: "Adam", timestamp: "2026-07-09T09:00:00Z", text: "Approved.", isSender: true }], hasMore: false, newestCursor: "cur-9", oldestCursor: "cur-9" });
+        return Response.json({ items: [{ id: "m9", chatID: "chat-ops", accountID: "tg-1", senderID: "u2", senderName: "Operator", timestamp: "2026-07-09T09:00:00Z", text: "Approved.", isSender: true }], hasMore: false, newestCursor: "cur-9", oldestCursor: "cur-9" });
       }
       return new Response("not found", { status: 404 });
     }) as typeof fetch;
@@ -148,12 +148,12 @@ describe("BeeperSource", () => {
       const url = new URL(String(input));
       if (url.pathname === "/v1/chats/search") {
         return Response.json({
-          items: [{ id: "chat-ops", title: "Marketing - AdamHodl and Hermes Mac Studio", type: "group", network: "Telegram", accountID: "tg-1", lastActivity: "2026-07-09T10:00:00Z" }],
+          items: [{ id: "chat-ops", title: "Marketing - OperatorUser and Hermes Mac Studio", type: "group", network: "Telegram", accountID: "tg-1", lastActivity: "2026-07-09T10:00:00Z" }],
           hasMore: false,
         });
       }
       if (url.pathname === "/v1/chats/chat-ops/messages") {
-        return Response.json({ items: [{ id: "m9", chatID: "chat-ops", accountID: "tg-1", senderID: "u2", senderName: "Adam", timestamp: "2026-07-09T09:00:00Z", text: "Approved.", isSender: true }], hasMore: false, newestCursor: "cur-9", oldestCursor: "cur-9" });
+        return Response.json({ items: [{ id: "m9", chatID: "chat-ops", accountID: "tg-1", senderID: "u2", senderName: "Operator", timestamp: "2026-07-09T09:00:00Z", text: "Approved.", isSender: true }], hasMore: false, newestCursor: "cur-9", oldestCursor: "cur-9" });
       }
       return new Response("not found", { status: 404 });
     }) as typeof fetch;

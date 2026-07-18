@@ -1,7 +1,7 @@
 -- Pending clarifying-question angles from ideate_propose_angle, persisted so
 -- ideate_answer_question can resolve them later -- Hermes cron jobs run in a
 -- fresh subprocess per invocation, so an in-memory Map does not survive from
--- "the morning digest asked a question" to "Adam answers hours later in a
+-- "the morning digest asked a question" to "the operator answers hours later in a
 -- separate conversation."
 CREATE TABLE pending_angles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

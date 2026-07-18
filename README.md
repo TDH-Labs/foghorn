@@ -5,7 +5,7 @@ chat + post history, pick platforms, track outperforming content, then
 ideate → draft → **gate** → approve → publish → measure → learn.
 
 Architecture transplants VibeHard's gate system (deterministic + LLM-judged gates,
-fix loop, anti-tamper, hold queue). Reference codebase: `~/dev/drydock` (READ-ONLY).
+fix loop, anti-tamper, hold queue).
 
 ## The invariant
 
@@ -47,8 +47,7 @@ bun test                         # unit + structural tests
 
 ## Reference
 
-- Privacy policy (for LinkedIn app registration's required field): [PRIVACY.md](PRIVACY.md),
-  published live at https://gist.github.com/adamrmatar/6e97e8131a834c4e04469fce1e2aec87
+- Privacy policy (for LinkedIn app registration's required field): [PRIVACY.md](PRIVACY.md)
 
 ## Onboarding (user actions before first live run)
 
@@ -56,8 +55,6 @@ bun test                         # unit + structural tests
 2. Request X archive + LinkedIn data export (24–48h) → `foghorn ingest x-archive/linkedin <zip>`
 3. X developer account (pay-per-use) → 4 keys into `.env.local`
 4. LinkedIn app + "Share on LinkedIn" product + OAuth grant → `LINKEDIN_*` + `LINKEDIN_ACCESS_TOKEN`
-5. BotFather bot → `FOGHORN_TELEGRAM_BOT_TOKEN` (chat id defaults to Adam's)
+5. BotFather bot → `FOGHORN_TELEGRAM_BOT_TOKEN` and `FOGHORN_TELEGRAM_CHAT_ID`
 6. `foghorn connect all` until green → `profile build` → `profile ratify` → `score build` → `score ratify`
 7. `services/install.sh` to load launchd jobs; shadow week at L0; then L1
-
-Plan of record: `~/.claude/plans/i-want-to-build-proud-minsky.md`

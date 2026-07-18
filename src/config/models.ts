@@ -55,21 +55,42 @@ const ANTHROPIC_TIER_MODEL: Record<Tier, string> = {
   light: "claude-haiku-4-5",
 };
 
-// Slugs + prices confirmed against openrouter.ai model pages 2026-07-06 --
-// marketplace pricing/slugs shift, re-verify before trusting long-term.
-// deepseek-v4-pro $0.435/$0.87 per MTok; deepseek-v4-flash $0.09/$0.18 (the
-// `:free` variant was pulled -- do not rely on it). z-ai/glm-5.2 ($0.56/$1.76)
-// is a same-tier alternate, selectable via FOGHORN_MODEL_<STAGE> if preferred.
+// OpenRouter slugs use "vendor/model" format.
+// OpenCode Go uses bare slugs without vendor prefix (confirmed 2026-07-17).
+// The FOGHORN_OPENROUTER_BASE_URL env var signals which gateway is active.
 const OPENROUTER_TIER_MODEL: Record<Tier, string> = {
   reason: "deepseek/deepseek-v4-pro",
   light: "deepseek/deepseek-v4-flash",
 };
+// OpenCode Go uses bare slugs. glm-5.2 / glm-5.1 are non-thinking models
+// confirmed working (2026-07-17). kimi-k2.6, kimi-k3, deepseek-v4-* are
+// thinking models that return null/empty content — avoid on OpenCode.
+// kimi-k2.5 and qwen3.5-plus are also confirmed non-thinking alternatives.
+const OPENCODE_TIER_MODEL: Record<Tier, string> = {
+  reason: "glm-5.2",
+  light: "glm-5.1",
+};
+
+function openrouterTierModel(): Record<Tier, string> {
+  return process.env.FOGHORN_OPENROUTER_BASE_URL ? OPENCODE_TIER_MODEL : OPENROUTER_TIER_MODEL;
+}
 
 export function modelForStage(stage: Stage): string {
   const perStage = process.env[`FOGHORN_MODEL_${stage.toUpperCase()}`];
   if (perStage) return perStage;
   const global = process.env.FOGHORN_MODEL;
   if (global) return global;
-  const tierModel = activeProvider() === "openrouter" ? OPENROUTER_TIER_MODEL : ANTHROPIC_TIER_MODEL;
+  const tierModel = activeProvider() === "openrouter" ? openrouterTierModel() : ANTHROPIC_TIER_MODEL;
   return tierModel[STAGE_TIER[stage]];
+}
+
+/**
+ * Returns a fallback model to retry with when the primary model returns empty output.
+ * Always returns the *light* tier model for the current provider.
+ * Returns the same string as modelForStage() when the primary is already light-tier —
+ * callers should skip the retry in that case (same model won't help).
+ */
+export function fallbackModelForStage(stage: Stage): string {
+  const tierModel = activeProvider() === "openrouter" ? openrouterTierModel() : ANTHROPIC_TIER_MODEL;
+  return tierModel["light"];
 }

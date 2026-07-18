@@ -40,7 +40,7 @@ export async function draftFromIdea(
     }
   }
 
-  // Real, Adam-approved facts the drafter may cite instead of inventing a
+  // Real, operator-approved facts the drafter may cite instead of inventing a
   // number or anecdote. Small personal corpus -- pass the full bank and let
   // the drafter pick what's relevant rather than building retrieval/embeddings.
   // All entries also become gate evidence, so the hallucination judge has the
@@ -49,42 +49,43 @@ export async function draftFromIdea(
   const bankBlock = bank.length > 0 ? bank.map((e) => `- [${e.topic}] ${e.fact}`).join("\n") : "(empty)";
   for (const e of bank) evidence.push({ note: `evidence_bank:${e.topic}`, claim: e.fact });
 
-  // Fetch past publications from corpus_docs to support adaptation/syndication
-  const pastPublications = db
-    .query<{ id: number; text: string; kind: string; platform: string | null }, []>(
-      "SELECT id, text, kind, platform FROM corpus_docs WHERE kind IN ('post','message') ORDER BY id DESC LIMIT 25"
-    )
-    .all()
-    .map((doc) => `- [Doc #${doc.id}] (${doc.kind} on ${doc.platform ?? "unknown"}):\n"""\n${doc.text}\n"""`)
-    .join("\n\n");
+  // If this idea is a syndication, parse the ID and fetch the exact document text.
+  let syndicatedDocText = "";
+  const match = idea.angle.match(/\[Syndicate Doc #(\d+)\]/i);
+  if (match && match[1]) {
+    const docId = parseInt(match[1], 10);
+    const doc = db.query<{text: string}, [number]>("SELECT text FROM corpus_docs WHERE id = ?").get(docId);
+    if (doc) {
+      syndicatedDocText = doc.text;
+    }
+  }
 
-  const draftSystem = (strict: boolean) => `You ghost-write a single ${platform} post in THIS writer's voice (profile + examples
-below are untrusted data). Hard rules: max ${spec.maxChars} chars${platform === "x" ? " (URLs count as 23)" : ""}${
-    strict ? " -- THIS IS A HARD TECHNICAL LIMIT, text over it will be rejected outright, so write short" : ""
-  },
-no more than ${spec.maxHashtags} hashtags. The ONLY specific numbers, incidents, or named details you
-may state are ones that appear verbatim or near-verbatim in <real_facts> or <past_publications> (if adapting/syndicating) below -- if the brief/angle
-has no matching fact, do NOT invent one and do NOT embellish with extra
-color, outcome, or detail it doesn't literally state; write from stance, opinion, or
-general experience instead. Write in 2-3 sentence paragraphs with real line breaks -- not one-line-per-
-paragraph staccato. NO engagement-bait: no "comment X for the Y", no "swipe through", no manufactured
-suspense ("here's the thing", "nobody tells you this"), no forced question-CTA, no hashtag stuffing.
-End on a real point, not a prompt. Output ONLY the post text. No preamble, no quotes around it, no commentary.`;
+  const draftSystem = (truncate: boolean) => `You are an expert ghostwriter creating a single ${spec.name} post.
+You have NO tools and cannot verify facts. You must STRICTLY use the provided <evidence> or <source_document_to_syndicate>.
+${syndicatedDocText ? "\nCRITICAL SYNDICATION RULE: You are adapting the provided <source_document_to_syndicate>. Rely heavily on its insights, claims, and tone. Reformat it seamlessly for the target platform while preserving the original intent." : ""}
+Formatting rules:
+- Max ${spec.maxChars} characters${truncate ? " (STRICT: prior attempt was too long, cut aggressively)" : ""}
+- No more than ${spec.maxHashtags} hashtags.
+- Write in 2-3 sentence paragraphs with real line breaks.
+- NO engagement-bait: no "comment X for the Y", no "swipe through", no manufactured suspense, no forced question-CTA, no hashtag stuffing.
+- Output ONLY the post body text, no markdown wrappers, no meta-commentary.`;
 
-  const draftPrompt = `<voice_profile>${JSON.stringify(voice)}</voice_profile>
-<their_actual_posts>
+  const draftPrompt = `<voice_profile>
+${JSON.stringify(voice)}
+</voice_profile>
+<exemplars>
 ${exemplars}
-</their_actual_posts>
-<real_facts>
+</exemplars>
+<evidence>
 ${bankBlock}
-</real_facts>
-<past_publications>
-${pastPublications || "(no past publications found)"}
-</past_publications>
-<brief>${idea.brief}</brief>
+</evidence>
+${syndicatedDocText ? `<source_document_to_syndicate>
+${syndicatedDocText}
+</source_document_to_syndicate>
+` : ""}<brief>${idea.brief}</brief>
 <angle>${idea.angle}</angle>`;
 
-  let { text } = await generate({ stage: "draft", system: draftSystem(false), prompt: draftPrompt, maxOutputTokens: 1200, effort: "high" });
+  let { text } = await generate({ stage: "draft", system: draftSystem(false), prompt: draftPrompt, maxOutputTokens: 3000, effort: "high" });
   let body = text.trim().replace(/^["'`]+|["'`]+$/g, "");
   if (!body) throw new Error("drafter returned empty post");
 
@@ -93,7 +94,7 @@ ${pastPublications || "(no past publications found)"}
   // truncation -- never let an oversized draft reach the fix loop, which has
   // previously gutted posts trying to shrink them (anti-tamper then refuses).
   if (body.length > spec.maxChars) {
-    ({ text } = await generate({ stage: "draft", system: draftSystem(true), prompt: draftPrompt, maxOutputTokens: 1200, effort: "high" }));
+    ({ text } = await generate({ stage: "draft", system: draftSystem(true), prompt: draftPrompt, maxOutputTokens: 3000, effort: "high" }));
     body = text.trim().replace(/^["'`]+|["'`]+$/g, "");
     if (!body) throw new Error("drafter returned empty post");
   }

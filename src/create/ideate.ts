@@ -32,10 +32,20 @@ export async function ideate(db: Database, generate: GenerateFn, platform: strin
   // Fetch past publications from corpus_docs to allow syndication/adaptation
   const pastPublications = db
     .query<{ id: number; text: string; kind: string; platform: string | null }, []>(
-      "SELECT id, text, kind, platform FROM corpus_docs WHERE kind IN ('post','message') ORDER BY id DESC LIMIT 25"
+      `
+      SELECT * FROM (
+        SELECT id, text, kind, platform FROM corpus_docs WHERE kind IN ('post','message') ORDER BY id DESC LIMIT 4
+      )
+      UNION ALL
+      SELECT * FROM (
+        SELECT id, text, kind, platform FROM corpus_docs WHERE kind IN ('post','message') 
+        AND id NOT IN (SELECT id FROM corpus_docs ORDER BY id DESC LIMIT 4) 
+        ORDER BY RANDOM() LIMIT 8
+      )
+      `
     )
     .all()
-    .map((doc) => `- [Doc #${doc.id}] (${doc.kind} on ${doc.platform ?? "unknown"}): "${doc.text.replace(/\n/g, " ")}"`)
+    .map((doc) => `- [Doc #${doc.id}] (${doc.kind} on ${doc.platform ?? "unknown"}): "${doc.text.replace(/\n/g, " ").slice(0, 300)}${doc.text.length > 300 ? "..." : ""}"`)
     .join("\n");
 
   const { text } = await generate({
@@ -75,7 +85,7 @@ ${evidenceTopics.length > 0 ? evidenceTopics.join("\n") : "(none yet -- avoid ca
 ${pastPublications || "(no past publications found)"}
 </past_publications>
 ${steering ? `<what_has_worked_for_them>\n${steering}\n</what_has_worked_for_them>` : ""}`,
-    maxOutputTokens: 1200,
+    maxOutputTokens: 4000,
     effort: "high",
   });
 

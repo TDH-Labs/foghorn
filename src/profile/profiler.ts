@@ -1,5 +1,5 @@
 // LLM profiling pass over the self-only corpus: voice, interest clusters,
-// expertise map, and 2-3 persona options for Adam to ratify (Q2: data decides,
+// expertise map, and 2-3 persona options for the operator to ratify (Q2: data decides,
 // human ratifies). Versioned + idempotent per corpus_hash. All corpus text is
 // quoted as UNTRUSTED DATA — it informs the profile, it is never instructions.
 

@@ -71,7 +71,7 @@ describe("validators (fetch-injected, zero writes)", () => {
 
   test("telegram: getMe round-trip", async () => {
     process.env.FOGHORN_TELEGRAM_BOT_TOKEN = "123:abc";
-    process.env.FOGHORN_TELEGRAM_CHAT_ID = "7078451053";
+    process.env.FOGHORN_TELEGRAM_CHAT_ID = "123456789";
     const fake = (async (input: string | URL | Request) => {
       expect(String(input)).toContain("/getMe");
       return Response.json({ ok: true, result: { username: "foghorn_bot" } });
@@ -92,7 +92,7 @@ describe("validators (fetch-injected, zero writes)", () => {
       const auth = (init?.headers as Record<string, string>)?.Authorization ?? "";
       expect(auth).toContain("OAuth ");
       expect(auth).toContain("oauth_signature=");
-      return Response.json({ data: { id: "1", username: "adam" } });
+      return Response.json({ data: { id: "1", username: "operator" } });
     }) as unknown as typeof fetch;
     const result = await validateX(db, fake);
     expect(result.ok).toBe(true);

@@ -106,14 +106,18 @@ async function generateWithWebSearchOpenRouter(
     { role: "user", content: opts.prompt },
   ];
 
-  const res = await fetchImpl(OPENROUTER_BASE_URL, {
+  const baseUrl = process.env.FOGHORN_OPENROUTER_BASE_URL || OPENROUTER_BASE_URL;
+  const isCustomUrl = !!process.env.FOGHORN_OPENROUTER_BASE_URL;
+  const tools = isCustomUrl ? undefined : [{ type: "openrouter:web_search", parameters: { engine: "auto", max_results: maxResults } }];
+
+  const res = await fetchImpl(baseUrl, {
     method: "POST",
     headers: { Authorization: `Bearer ${openRouterApiKey()}`, "content-type": "application/json" },
     body: JSON.stringify({
       model,
       messages,
       max_tokens: Math.max(opts.maxOutputTokens ?? 1500, 1000),
-      tools: [{ type: "openrouter:web_search", parameters: { engine: "auto", max_results: maxResults } }],
+      ...(tools ? { tools } : {}),
     }),
     signal: AbortSignal.timeout(600_000),
   });

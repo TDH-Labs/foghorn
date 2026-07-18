@@ -28,7 +28,7 @@ import { ideateChat } from "../src/create/ideate-chat.ts";
 import { authorizeLinkedIn, buildAuthUrl, REDIRECT_PORT, SCOPES } from "../src/connectors/linkedin-oauth.ts";
 import { randomBytes } from "node:crypto";
 
-const PORT = 3009;
+const PORT = 3010;
 const PUBLIC_DIR = join(import.meta.dir, "public");
 
 // SSE streaming controllers
@@ -97,6 +97,7 @@ async function runBeeperIngest(db: Database) {
 }
 
 const server = Bun.serve({
+  hostname: "127.0.0.1",
   port: PORT,
   idleTimeout: 0, // Disable timeout for long-running SSE streams (engine, profile build, scan)
   async fetch(req) {
@@ -627,6 +628,42 @@ const server = Bun.serve({
            WHERE s.state IN ('pending', 'firing') ORDER BY s.scheduled_for ASC`
         );
         return Response.json(schedule, { headers: corsHeaders });
+      }
+
+      const scheduleMatch = path.match(/^\/api\/schedule\/(\d+)$/);
+      if (scheduleMatch) {
+        const id = parseInt(scheduleMatch[1], 10);
+        if (method === "PUT") {
+          const body = await req.json();
+          if (body.scheduled_for) {
+            db.run("UPDATE schedule SET scheduled_for = ? WHERE id = ?", [body.scheduled_for, id]);
+          }
+          return Response.json({ success: true }, { headers: corsHeaders });
+        }
+        if (method === "DELETE") {
+          db.run("UPDATE schedule SET state = 'cancelled' WHERE id = ?", [id]);
+          return Response.json({ success: true }, { headers: corsHeaders });
+        }
+      }
+
+      if (path === "/api/replies" && method === "GET") {
+        const replies = dbQuery<any>(
+          db,
+          `SELECT m.*, d.body_text as draft_body, d.content_class
+           FROM mentions m 
+           LEFT JOIN drafts d ON m.reply_draft_id = d.id
+           ORDER BY m.id DESC LIMIT 50`
+        );
+        return Response.json(replies, { headers: corsHeaders });
+      }
+
+      if (path === "/api/engine/replies" && method === "POST") {
+        // Trigger the reply engine
+        const { runReplyEngine } = await import("../src/replies/reply-engine.ts");
+        const { XSource } = await import("../src/replies/sources/x-source.ts");
+        // For now, we'll run it for X as an example. Production would iterate active profiles/platforms.
+        const report = await runReplyEngine(db, { generate }, "x", new XSource(db));
+        return Response.json(report, { headers: corsHeaders });
       }
 
       if (path === "/api/publish-tick" && method === "POST") {

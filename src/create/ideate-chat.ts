@@ -1,5 +1,5 @@
 // Interactive ideation: for each proposed angle, ask ONE clarifying question
-// if it needs a real specific to be credible, take Adam's live answer as
+// if it needs a real specific to be credible, take the operator's live answer as
 // approved evidence (an explicit, in-the-moment human act -- same trust tier
 // as `foghorn evidence add`), then draft through the normal gate chain. This
 // is the direct fix for pure-autonomous drafting hitting a voice-score wall

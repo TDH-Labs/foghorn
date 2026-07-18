@@ -3,6 +3,8 @@
 //
 // Lessons encoded: maxOutputTokens floor 500 (reasoning models silently eat
 // small budgets); whitespace-only responses retried once; SDK handles 429/5xx.
+// After primary retries, a light-tier fallback model is tried before giving up
+// (guards against DeepSeek/reasoning model whitespace-flake on the fix stage).
 //
 // generateTextResilient() is the ONE stable entry point every gate/create/
 // profile module calls -- provider selection (config/models.ts activeProvider())
@@ -10,7 +12,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { Database } from "bun:sqlite";
-import { activeProvider, modelForStage, type Stage } from "../config/models.ts";
+import { activeProvider, modelForStage, fallbackModelForStage, type Stage } from "../config/models.ts";
 import { preflight, record, unitCost } from "../spend/ledger.ts";
 import { generateViaOpenRouter } from "./openrouter.ts";
 import { generateViaClaudeCli } from "./claude-cli.ts";
@@ -68,7 +70,19 @@ export async function generateTextResilient(db: Database, opts: GenerateOpts): P
       );
     }
   }
-  if (activeProvider() === "openrouter") return generateViaOpenRouter(db, opts);
+  if (activeProvider() === "openrouter") {
+    try {
+      return await generateViaOpenRouter(db, opts);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Whitespace-only flake from primary model — retry once with the light
+      // fallback before surfacing the error. Any other error (402, network) re-throws immediately.
+      if (!msg.includes("whitespace-only response")) throw err;
+      const fallback = fallbackModelForStage(opts.stage);
+      console.warn(`[generate] whitespace-only from primary; retrying stage=${opts.stage} with fallback model=${fallback}`);
+      return await generateViaOpenRouter(db, opts, fetch, fallback);
+    }
+  }
   return generateViaAnthropic(db, opts);
 }
 
@@ -122,6 +136,25 @@ async function generateViaAnthropic(db: Database, opts: GenerateOpts): Promise<G
     if (text.trim().length > 0) return { text, model, usage, costUsd };
     lastText = text;
   }
+
+  // Primary model exhausted. Try the light-tier fallback once before giving up.
+  const fallback = fallbackModelForStage(opts.stage);
+  if (fallback !== model) {
+    console.warn(`[generate] whitespace-only from ${model}; retrying stage=${opts.stage} with fallback=${fallback}`);
+    const fbMaxTokens = Math.max(opts.maxOutputTokens ?? 8192, MIN_OUTPUT_TOKENS);
+    const response = await anthropic.messages.create({
+      model: fallback,
+      max_tokens: fbMaxTokens,
+      ...(opts.system ? { system: opts.system } : {}),
+      messages: [{ role: "user", content: opts.prompt }],
+    });
+    const fbText = response.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
+    const fbUsage = { in: response.usage.input_tokens, out: response.usage.output_tokens, cacheRead: 0, cacheWrite: 0 };
+    const fbCost = estimateCostUsd(db, fallback, fbUsage.in, fbUsage.out);
+    record(db, { category: "llm", units: fbUsage.in + fbUsage.out, unitCostUsd: fbUsage.in + fbUsage.out > 0 ? fbCost / (fbUsage.in + fbUsage.out) : 0, provider: "anthropic", model: fallback, ref: opts.stage });
+    if (fbText.trim().length > 0) return { text: fbText, model: fallback, usage: fbUsage, costUsd: fbCost };
+  }
+
   throw new Error(
     `whitespace-only response after retries: stage=${opts.stage} model=${model} len=${lastText.length}`,
   );

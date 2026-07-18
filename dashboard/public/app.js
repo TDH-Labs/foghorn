@@ -235,6 +235,8 @@ const routes = {
   "#platforms": "platforms",
   "#automations": "automations",
   "#settings": "settings",
+  "#replies": "replies",
+  "#scheduler": "scheduler",
 };
 
 async function handleRouting() {

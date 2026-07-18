@@ -34,7 +34,7 @@ describe("ingest store privacy invariant", () => {
     storeMessages(db, sourceId, [
       msg({ externalId: "o1", isSelf: false }),
       msg({ externalId: "o2", isSelf: false, text: LONG_OTHER + " again" }),
-      msg({ externalId: "s1", isSelf: true, senderName: "Adam", text: LONG_SELF }),
+      msg({ externalId: "s1", isSelf: true, senderName: "User", text: LONG_SELF }),
     ]);
     const corpus = db.query<{ external_id: string }, []>("SELECT external_id FROM corpus_docs").all();
     expect(corpus).toHaveLength(1);
@@ -78,7 +78,7 @@ describe("ingest store privacy invariant", () => {
   test("pii flags are recorded on the message row", () => {
     const db = freshDb();
     const sourceId = ensureSource(db, "beeper");
-    storeMessages(db, sourceId, [msg({ externalId: "p1", text: "reach me at adam@example.com about the deal" })]);
+    storeMessages(db, sourceId, [msg({ externalId: "p1", text: "reach me at user@example.com about the deal" })]);
     const row = db
       .query<{ pii_flags_json: string }, [string]>("SELECT pii_flags_json FROM messages WHERE external_id = ?")
       .get("p1");

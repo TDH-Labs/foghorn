@@ -7,7 +7,7 @@ import { effectiveLevel, ratifyPromotion, recordCleanApproval, recordIncident } 
 
 process.env.FOGHORN_SENTINEL_SECRET = "test-secret-0123456789abcdef";
 process.env.FOGHORN_TELEGRAM_BOT_TOKEN = "123:testtoken";
-process.env.FOGHORN_TELEGRAM_CHAT_ID = "7078451053";
+process.env.FOGHORN_TELEGRAM_CHAT_ID = "123456789";
 process.env.FOGHORN_HERMES_BOT_TOKEN = "456:hermestesttoken";
 // isolate the kill-switch flag: the telegram 'pause' test must not touch data/PAUSED
 process.env.FOGHORN_PAUSED_FLAG = `${process.env.TMPDIR ?? "/tmp"}/foghorn-test-paused-${process.pid}`;
@@ -176,8 +176,8 @@ describe("telegram approval loop", () => {
         update_id: 42,
         callback_query: {
           id: "cb1",
-          from: { id: 7078451053 },
-          message: { message_id: 555, chat: { id: 7078451053 } },
+          from: { id: 123456789 },
+          message: { message_id: 555, chat: { id: 123456789 } },
           data: `a:${approvalId}:ap:${nonce}`,
         },
       },
@@ -196,7 +196,7 @@ describe("telegram approval loop", () => {
     const nonce = db.query<{ nonce: string }, [number]>("SELECT nonce FROM approvals WHERE id=?").get(approvalId)!.nonce;
     const { fetchImpl } = fakeTelegram([
       { update_id: 1, callback_query: { id: "c1", from: { id: 999 }, data: `a:${approvalId}:ap:${nonce}` } },
-      { update_id: 2, callback_query: { id: "c2", from: { id: 7078451053 }, data: `a:${approvalId}:ap:WRONG` } },
+      { update_id: 2, callback_query: { id: "c2", from: { id: 123456789 }, data: `a:${approvalId}:ap:WRONG` } },
     ]);
     const report = await pollOnce(db, fetchImpl, 0);
     expect(report.decisions).toBe(0);
@@ -216,8 +216,8 @@ describe("telegram approval loop", () => {
         {
           update_id: 100 + i,
           callback_query: {
-            id: `cb${i}`, from: { id: 7078451053 },
-            message: { message_id: 1, chat: { id: 7078451053 } },
+            id: `cb${i}`, from: { id: 123456789 },
+            message: { message_id: 1, chat: { id: 123456789 } },
             data: `a:${approvalId}:ap:${nonce}`,
           },
         },
@@ -234,7 +234,7 @@ describe("telegram approval loop", () => {
     // Reply with exactly the text the bot suggested
     db.run("UPDATE settings SET value='3' WHERE key='max_autonomy_level'"); // raise ceiling so L2 is reachable
     const { fetchImpl: promoteFetch, calls: promoteCalls } = fakeTelegram([
-      { update_id: 200, message: { message_id: 2, chat: { id: 7078451053 }, text: "promote x/opinion_take" } },
+      { update_id: 200, message: { message_id: 2, chat: { id: 123456789 }, text: "promote x/opinion_take" } },
     ]);
     const report = await pollOnce(db, promoteFetch, 0);
     expect(report.commands).toBe(1);
@@ -247,7 +247,7 @@ describe("telegram approval loop", () => {
   test('"promote" for a platform/class with no autonomy state yet replies clearly instead of crashing', async () => {
     const db = freshDb();
     const { fetchImpl, calls } = fakeTelegram([
-      { update_id: 1, message: { message_id: 1, chat: { id: 7078451053 }, text: "promote nostr/thread_deep_dive" } },
+      { update_id: 1, message: { message_id: 1, chat: { id: 123456789 }, text: "promote nostr/thread_deep_dive" } },
     ]);
     const report = await pollOnce(db, fetchImpl, 0);
     expect(report.commands).toBe(1);
@@ -259,7 +259,7 @@ describe("telegram approval loop", () => {
   test("'pause' text command from the approver chat pauses the kill switch", async () => {
     const db = freshDb();
     const { fetchImpl } = fakeTelegram([
-      { update_id: 7, message: { message_id: 1, chat: { id: 7078451053 }, text: "pause" } },
+      { update_id: 7, message: { message_id: 1, chat: { id: 123456789 }, text: "pause" } },
     ]);
     const report = await pollOnce(db, fetchImpl, 0);
     expect(report.commands).toBe(1);
