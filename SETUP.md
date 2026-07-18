@@ -38,6 +38,12 @@ Foghorn supports Anthropic and OpenRouter.
 1. **Anthropic**: Get an API key from [console.anthropic.com](https://console.anthropic.com/) and set `ANTHROPIC_API_KEY`.
 2. **OpenRouter**: Get an API key from [openrouter.ai](https://openrouter.ai/) and set `OPENROUTER_API_KEY`. It will auto-detect OpenRouter if set.
 
+### Operator Specialty (Optional but Recommended)
+To help the AI agent focus on the right topics and extract the most relevant evidence, you can specify your business or specialties as a comma-separated list.
+```env
+FOGHORN_BUSINESS_DOMAINS="indie hacking, typescript engineering, digital marketing"
+```
+
 ## 3. Communication Channels
 
 ### Beeper (Ingestion)

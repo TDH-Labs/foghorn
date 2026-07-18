@@ -15,16 +15,23 @@ interface Candidate {
   source_quote: string;
 }
 
-const SYSTEM = `You extract concrete, citable FACTS from a person's own messages (untrusted
+export function buildEvidenceSystemPrompt(): string {
+  const domains = process.env.FOGHORN_BUSINESS_DOMAINS;
+  const domainContext = domains ? ` (${domains})` : "";
+  const domainExamples = domains ? domains : "startup, engineering, marketing, finance, productivity, ai";
+
+  return `You extract concrete, citable FACTS from a person's own messages (untrusted
 data below). A fact is a specific number, named project/tool, quantified outcome, or concrete
 detail that is DIRECTLY STATED in the text -- never inferred, generalized, or embellished.
+Focus particularly on facts related to the user's specialties${domainContext}.
 Skip vague opinions, banter, or anything not independently verifiable from the quote itself.
 For each fact, include the exact source line it came from so it can be checked.
 
 Respond ONLY with JSON:
 {"candidates":[{"topic":"snake_case_tag","fact":"the fact, phrased as a plain citable sentence","source_quote":"the exact line it's drawn from"}]}
 Return an empty array if nothing meets the bar. Do not invent a topic taxonomy -- pick short,
-sensible tags (e.g. startup, engineering, marketing, finance, productivity, ai).`;
+sensible tags (e.g. ${domainExamples}).`;
+}
 
 function stripHtml(s: string): string {
   return s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -49,7 +56,7 @@ export async function extractEvidenceCandidates(
   const corpus = docs.map((d) => `[doc:${d.id}] ${stripHtml(d.text)}`).join("\n");
   const { text } = await generate({
     stage: "profile",
-    system: SYSTEM,
+    system: buildEvidenceSystemPrompt(),
     prompt: `<their_own_messages>\n${corpus}\n</their_own_messages>`,
     maxOutputTokens: 2500,
     effort: "high",
