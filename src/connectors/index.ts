@@ -1,4 +1,4 @@
-// Connector contract (drydock src/connectors pattern): validate credentials
+// Connector contract: validate credentials
 // against the live provider with ZERO writes, report per-check results, store
 // nothing — creds stay in .env.local. Fetch-injected for offline unit tests.
 

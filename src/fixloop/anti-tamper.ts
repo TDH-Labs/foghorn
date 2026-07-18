@@ -1,4 +1,4 @@
-// Anti-tamper (drydock B-1 semantics): a "fix" that deletes the flagged
+// Anti-tamper semantics: a "fix" that deletes the flagged
 // content instead of addressing it is rejected and escalated — never shipped.
 
 import type { DraftSubject } from "../types.ts";

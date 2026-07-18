@@ -2,7 +2,7 @@
 // the gate runner on a passing full chain; bound to the exact canonical bytes of
 // one draft version; single-use (atomic consume); revoked on any draft edit.
 // Missing FOGHORN_SENTINEL_SECRET => random per-process key, which fails closed
-// across processes (drydock sentinelMac semantics).
+// across processes.
 
 import { createHmac, createHash, randomBytes } from "node:crypto";
 import type { Database } from "bun:sqlite";

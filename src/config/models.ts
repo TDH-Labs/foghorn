@@ -1,4 +1,4 @@
-// Per-stage model tiers (drydock src/config/models.ts pattern).
+// Per-stage model tiers.
 // Override per stage with FOGHORN_MODEL_<STAGE>, globally with FOGHORN_MODEL.
 // Documented cost knob: FOGHORN_MODEL_SCAN=claude-sonnet-5 cuts the biggest line item.
 //

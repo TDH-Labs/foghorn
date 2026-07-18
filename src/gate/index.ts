@@ -1,4 +1,4 @@
-// Fail-closed gate chain runner (port of drydock src/gate/index.ts semantics):
+// Fail-closed gate chain runner:
 // a gate that throws becomes a blocking critical finding; "n/a" is never "pass";
 // an all-n/a board mints no sentinel. Sentinels are minted here and only here.
 

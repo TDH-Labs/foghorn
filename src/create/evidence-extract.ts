@@ -24,7 +24,7 @@ For each fact, include the exact source line it came from so it can be checked.
 Respond ONLY with JSON:
 {"candidates":[{"topic":"snake_case_tag","fact":"the fact, phrased as a plain citable sentence","source_quote":"the exact line it's drawn from"}]}
 Return an empty array if nothing meets the bar. Do not invent a topic taxonomy -- pick short,
-sensible tags (e.g. harbor, drydock, ratatoskr, childcare_ops, medical_office_re, bitcoin).`;
+sensible tags (e.g. startup, engineering, marketing, finance, productivity, ai).`;
 
 function stripHtml(s: string): string {
   return s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();

@@ -1,5 +1,5 @@
 // gate -> fix -> re-gate on the FAST chain, bounded and plateau-detected
-// (drydock autofix semantics). Escalation writes a hold packet and moves on —
+// Escalation writes a hold packet and moves on —
 // the pipeline never blocks on a human. Every accepted fix bumps the draft
 // version and revokes any live sentinel.
 

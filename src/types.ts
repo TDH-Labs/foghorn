@@ -1,4 +1,4 @@
-// Core contracts. Mirrors drydock's src/types.ts gate shapes (fail-closed, n/a != pass).
+// Core contracts. Defines gate shapes (fail-closed, n/a != pass).
 
 export type GateStatus = "pass" | "block" | "n/a" | "escalate";
 export type Severity = "low" | "medium" | "high" | "critical";

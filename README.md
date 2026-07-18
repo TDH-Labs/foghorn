@@ -4,7 +4,7 @@ Automated social-influence pipeline for a solo operator: profile voice/interests
 chat + post history, pick platforms, track outperforming content, then
 ideate → draft → **gate** → approve → publish → measure → learn.
 
-Architecture transplants VibeHard's gate system (deterministic + LLM-judged gates,
+Architecture transplants the core gate system (deterministic + LLM-judged gates,
 fix loop, anti-tamper, hold queue).
 
 ## The invariant
