@@ -121,3 +121,12 @@ To install the background services:
 **Shadow Mode:** Foghorn starts at Autonomy Level 0 (L0) for each platform. In L0, it will draft and approve posts, but it will **never** actually publish them. It runs in "shadow mode" so you can observe its behavior safely.
 
 As you approve good drafts in Telegram, Foghorn's autonomy streak will increase, eventually offering promotions to L1 (scheduled publishing) and L2 (immediate publishing).
+
+## 7. Advanced: Live Agent Integration
+
+If you use a conversational AI client or agent framework (like Claude Desktop, Harbor, etc.) alongside Foghorn, you can grant your conversational agent real-time access to search your Beeper chats.
+
+Beeper Desktop automatically runs its own local MCP (Model Context Protocol) server. You can wire this directly into your agent's configuration:
+- **Endpoint**: `http://127.0.0.1:23373/v0/mcp`
+
+This allows your Telegram/Desktop agent to live-search your messages across Signal, WhatsApp, and Telegram on-demand, completely independent of Foghorn's background ingestion pipeline.
