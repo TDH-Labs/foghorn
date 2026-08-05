@@ -6,7 +6,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { Database } from "bun:sqlite";
-import { activeProvider, modelForStage, type Stage } from "../config/models.ts";
+import { activeProvider, modelForStage, websearchModelForStage, type Stage } from "../config/models.ts";
 import { preflight, record, unitCost } from "../spend/ledger.ts";
 
 export interface WebSearchOpts {
@@ -93,7 +93,7 @@ async function generateWithWebSearchOpenRouter(
   opts: WebSearchOpts,
   fetchImpl: typeof fetch = fetch,
 ): Promise<WebSearchResult> {
-  const model = modelForStage(opts.stage);
+  const model = websearchModelForStage(opts.stage);
   const maxResults = opts.maxSearches ?? 6;
 
   const searchRate = unitCost(db, "llm.web_search.per_search", 0.005);

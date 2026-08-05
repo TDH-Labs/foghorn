@@ -46,14 +46,44 @@ ${outperformers.length > 0 ? `Watchlist posts already detected outperforming (z>
 ${outperformers.map((o) => `- @${o.handle} z=${o.zscore.toFixed(1)}: ${o.textSnippet ?? ""} ${o.url ?? ""}`).join("\n")}` : ""}
 Research what is outperforming in this niche on ${platform} right now.`;
 
-  const { text } = await generate({ stage: "scan", prompt, system: SYSTEM, maxOutputTokens: 1500, maxSearches: 6 });
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end <= start) throw new Error("trend scanner: no JSON in output");
-  const parsed = JSON.parse(text.slice(start, end + 1)) as {
-    cards: { title: string; summary: string; format: string; evidence: { url: string; note: string }[]; ttl_days?: number }[];
-  };
-  if (!Array.isArray(parsed.cards)) throw new Error("trend scanner: malformed cards");
+  const { text } = await generate({ stage: "scan", prompt, system: SYSTEM, maxOutputTokens: 3000, maxSearches: 6 });
+
+  // Robust JSON extraction with markdown-fence stripping and retry.
+  let parsed: { cards: { title: string; summary: string; format: string; evidence: { url: string; note: string }[]; ttl_days?: number }[] } | null = null;
+  let attempt = 0;
+  let lastText = text;
+
+  while (attempt < 3) {
+    attempt++;
+    // Strip markdown code fences if present.
+    let clean = lastText;
+    const fenced = clean.match(/```(?:json)?\s*([\s\S]*?)```/)?.[1];
+    if (fenced) clean = fenced;
+
+    const start = clean.indexOf("{");
+    const end = clean.lastIndexOf("}");
+    if (start === -1 || end <= start) {
+      if (attempt < 3) {
+        lastText = (await generate({ stage: "scan", prompt, system: SYSTEM, maxOutputTokens: 3000, maxSearches: 6 })).text;
+        continue;
+      }
+      throw new Error("trend scanner: no JSON in output");
+    }
+
+    try {
+      parsed = JSON.parse(clean.slice(start, end + 1)) as {
+        cards: { title: string; summary: string; format: string; evidence: { url: string; note: string }[]; ttl_days?: number }[];
+      };
+      break;
+    } catch {
+      if (attempt < 3) {
+        lastText = (await generate({ stage: "scan", prompt, system: SYSTEM, maxOutputTokens: 3000, maxSearches: 6 })).text;
+        continue;
+      }
+      throw new Error("trend scanner: JSON parse failed after retries");
+    }
+  }
+  if (!parsed || !Array.isArray(parsed.cards)) throw new Error("trend scanner: malformed cards");
 
   const recent = new Set(
     db

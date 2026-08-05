@@ -75,6 +75,35 @@ function openrouterTierModel(): Record<Tier, string> {
   return process.env.FOGHORN_OPENROUTER_BASE_URL ? OPENCODE_TIER_MODEL : OPENROUTER_TIER_MODEL;
 }
 
+// Web-search generation (trend scanner) needs a NON-thinking model on the
+// OpenRouter path: DeepSeek v4 reasoning models return empty or truncated
+// content under openrouter:web_search — the chain-of-thought eats the output
+// budget before visible text is produced. Confirmed live 2026-08-05: 12
+// consecutive failed scans (JSON parse after retries) on Jul 31, then
+// "web-search generation returned empty text" on Aug 5, all on
+// deepseek/deepseek-v4-pro, while the spend ledger shows the searches were
+// charged (8-9 searches, ~50 citations, $0.09-0.14 per attempt). z-ai/glm-5.2
+// is the repo-documented non-thinking same-tier alternate, live-verified with
+// the web_search tool. Explicit FOGHORN_MODEL_<STAGE> / FOGHORN_MODEL
+// overrides still win. OpenCode gateway tier models (glm-5.2/glm-5.1) are
+// already non-thinking, so no override needed there.
+const OPENROUTER_WEBSEARCH_MODEL = "z-ai/glm-5.2";
+
+/** Model for web-search generation (trend scanner). Same override chain as
+ * modelForStage(), but on the OpenRouter path prefers a non-thinking model. */
+export function websearchModelForStage(stage: Stage): string {
+  const perStage = process.env[`FOGHORN_MODEL_${stage.toUpperCase()}`];
+  if (perStage) return perStage;
+  const global = process.env.FOGHORN_MODEL;
+  if (global) return global;
+  const provider = activeProvider();
+  if (provider === "openrouter" && !process.env.FOGHORN_OPENROUTER_BASE_URL) {
+    return OPENROUTER_WEBSEARCH_MODEL;
+  }
+  const tierModel = provider === "openrouter" ? openrouterTierModel() : ANTHROPIC_TIER_MODEL;
+  return tierModel[STAGE_TIER[stage]];
+}
+
 export function modelForStage(stage: Stage): string {
   const perStage = process.env[`FOGHORN_MODEL_${stage.toUpperCase()}`];
   if (perStage) return perStage;
