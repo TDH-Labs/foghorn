@@ -87,7 +87,10 @@ function openrouterTierModel(): Record<Tier, string> {
 // the web_search tool. Explicit FOGHORN_MODEL_<STAGE> / FOGHORN_MODEL
 // overrides still win. OpenCode gateway tier models (glm-5.2/glm-5.1) are
 // already non-thinking, so no override needed there.
-const OPENROUTER_WEBSEARCH_MODEL = "z-ai/glm-5.2";
+// 2026-08-06: scan web-search generation switched to DeepSeek V4 Flash 0731
+// (light-tier non-thinking, $0.09/$0.18 per MTok) per operator request; glm-5.2
+// remains a viable non-thinking alternate if this ever changes.
+const OPENROUTER_WEBSEARCH_MODEL = "deepseek/deepseek-v4-flash-0731";
 
 /** Model for web-search generation (trend scanner). Same override chain as
  * modelForStage(), but on the OpenRouter path prefers a non-thinking model. */
